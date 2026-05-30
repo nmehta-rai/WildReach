@@ -72,8 +72,8 @@ public class ClimbingSystem : MonoBehaviour
         bool climbMoving = Mathf.Abs(v) > 0.05f || Mathf.Abs(h) > 0.05f;
 
         Vector3 wallUp    = Vector3.ProjectOnPlane(Vector3.up, smoothNormal).normalized;
-        Vector3 wallRight = Vector3.Cross(smoothNormal, Vector3.up).normalized;
-        Vector3 move = (wallUp * v + wallRight * -h) * climbSpeed * Time.fixedDeltaTime;
+        Vector3 wallRight = Vector3.Cross(smoothNormal, Vector3.up).normalized;  // = player's right when facing the wall
+        Vector3 move = (wallUp * v + wallRight * h) * climbSpeed * Time.fixedDeltaTime;
 
         // Hold a fixed standoff off the rock (only against a fresh surface point), nudged
         // gently/clamped so the curved terrain normal can't snap him in and out of the wall.
@@ -81,9 +81,9 @@ public class ClimbingSystem : MonoBehaviour
         if (detected)
         {
             Vector3 normalXZ = new Vector3(smoothNormal.x, 0, smoothNormal.z).normalized;
-            float standoff = capsule.radius + 0.3f;
+            float standoff = capsule.radius + 0.45f;     // sit further off the rock (less clipping)
             float distToSurface = Vector3.Dot(rb.position - wallHit.point, normalXZ);
-            float correction = Mathf.Clamp(standoff - distToSurface, -0.08f, 0.08f);
+            float correction = Mathf.Clamp(standoff - distToSurface, -0.15f, 0.15f);  // push out faster
             wallCorrection = normalXZ * correction;
         }
 
