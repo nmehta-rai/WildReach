@@ -7,6 +7,7 @@ public class PlayerAnimator : MonoBehaviour
     Rigidbody rb;
     PlayerMovement movement;
     ClimbingSystem climbing;
+    SwimSystem swim;
 
     void Awake()
     {
@@ -14,6 +15,7 @@ public class PlayerAnimator : MonoBehaviour
         rb = GetComponentInParent<Rigidbody>();
         movement = GetComponentInParent<PlayerMovement>();
         climbing = GetComponentInParent<ClimbingSystem>();
+        swim = GetComponentInParent<SwimSystem>();
     }
 
     void OnEnable()  { if (movement != null) movement.Jumped += OnJump; }
@@ -38,6 +40,11 @@ public class PlayerAnimator : MonoBehaviour
         animator.SetFloat("Speed", norm, 0.1f, Time.deltaTime);   // small damp = smooth blend
         animator.SetFloat("VerticalVelocity", rb.linearVelocity.y);
         animator.SetBool("IsGrounded", movement.IsGrounded);
+
+        // Swimming: tread (idle) ↔ swim (moving) by the same normalised speed.
+        bool isSwimming = swim != null && swim.IsSwimming;
+        animator.SetBool("IsSwimming", isSwimming);
+        if (isSwimming) animator.SetFloat("SwimSpeed", norm, 0.1f, Time.deltaTime);
 
         // Climbing: ClimbDir picks down/cling/up; ClimbMag scales playback so he freezes
         // (clings) when not moving and animates only while actually climbing.

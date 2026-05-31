@@ -9,8 +9,25 @@ public static class SetupWater
     const string Dir      = "Assets/Environment/Water/";
     const string MeshPath = Dir + "WaterPlane.mesh";
     const string MatPath  = Dir + "Water.mat";
-    const float  Size = 40f;   // metres across
-    const int    Res  = 80;    // grid subdivisions (81x81 verts)
+    const float  Size = 1000f; // metres across — a vast ocean that surrounds the island slice
+    const int    Res  = 300;   // grid subdivisions (301x301 verts) → ~3.3m quads so waves still sample near shore
+
+    // Sea level (world Y). Tuned by eye: at 4.5 the island flooded; this sits the coastline lower.
+    // Other tools (Setup Ship) read this so the ship floats at the same surface.
+    public const float SeaLevel = 1.5f;
+
+    // Centre of the island in X/Z, so the ocean (and the ship) sit on the slice rather than off in the void.
+    public static Vector3 IslandCenter()
+    {
+        var t = Object.FindObjectOfType<Terrain>();
+        if (t != null)
+        {
+            var s = t.terrainData.size;
+            var p = t.transform.position;
+            return new Vector3(p.x + s.x * 0.5f, 0f, p.z + s.z * 0.5f);
+        }
+        return Vector3.zero;
+    }
 
     [MenuItem("WildReach/Setup Water")]
     static void Setup()
@@ -67,9 +84,16 @@ public static class SetupWater
         mr.sharedMaterial = mat;
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
+        // auto-place: centre on the island, sit at sea level
+        var c = IslandCenter();
+        go.transform.position = new Vector3(c.x, SeaLevel, c.z);
+        go.transform.rotation = Quaternion.identity;
+        go.transform.localScale = Vector3.one;
+
         AssetDatabase.SaveAssets();
         Selection.activeGameObject = go;
-        Debug.Log("[Water] Water plane built (40m, subdivided). Move it into the valley and lower Y to the " +
-                  "water level. If the material is PINK, the shader didn't compile — paste the error.");
+        Debug.Log($"[Water] Ocean built (1000m) and placed at island centre, sea level Y={SeaLevel}. " +
+                  $"If the island still floods or sits too high/dry, change SeaLevel in SetupWater.cs and re-run. " +
+                  $"If the material is PINK, the shader didn't compile.");
     }
 }

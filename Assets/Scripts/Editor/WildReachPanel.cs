@@ -24,6 +24,7 @@ public class WildReachPanel : EditorWindow
         Btn("Reset Flat Terrain");
         Btn("Setup Ground");
         Btn("Setup Grass Details");
+        Btn("Setup World Colliders");
 
         Section("Lighting & Time");
         Btn("Setup Golden Hour");
@@ -34,6 +35,8 @@ public class WildReachPanel : EditorWindow
         Section("Character");
         Btn("Setup Azure Character");
         Btn("Swap In Azure Player");
+        Btn("Setup Jump Anim");
+        Btn("Setup Climb IK");
         Btn("Debug Scale");
 
         Section("Hero Tree (Hollowroot)");
@@ -57,6 +60,14 @@ public class WildReachPanel : EditorWindow
 
         Section("Water");
         Btn("Setup Water");
+
+        Section("Ship");
+        Btn("Setup Ship");
+        Btn("Setup Sailing");
+        Btn("Setup Swim Anim");
+
+        Section("Creatures");
+        Btn("Setup Creature");
 
         GUILayout.Space(10);
         EditorGUILayout.HelpBox("Buttons run the matching WildReach menu item. Dock me next to the Inspector.", MessageType.None);
