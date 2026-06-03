@@ -20,7 +20,7 @@ public class DayNightCycle : MonoBehaviour
     [SerializeField] Color dayColor     = new Color(1f, 0.95f, 0.84f);
     [SerializeField] float dayIntensity = 1.15f;
     [SerializeField] Color dayAmbient   = new Color(0.55f, 0.52f, 0.46f);
-    [SerializeField] Color dayFog       = new Color(0.98f, 0.74f, 0.55f);
+    [SerializeField] Color dayFog       = new Color(0.74f, 0.82f, 0.90f);   // cool atmospheric haze, not orange
     [Header("Sunrise / sunset")]
     [SerializeField] Color horizonColor = new Color(1f, 0.55f, 0.30f);
     [Header("Night")]

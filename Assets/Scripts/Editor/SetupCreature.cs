@@ -180,7 +180,7 @@ public static class SetupCreature
 
     static Vector3 LandSpotNearCentre(float sea)
     {
-        var t = Object.FindObjectOfType<Terrain>();
+        var t = Object.FindFirstObjectByType<Terrain>();
         Vector3 c = SetupWater.IslandCenter();
         if (t == null) return c;
         for (int i = 0; i < 40; i++)

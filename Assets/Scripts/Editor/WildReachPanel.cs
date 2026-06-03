@@ -1,101 +1,135 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEditor;
 
-// A dockable control panel for all the WildReach setup tools, grouped by category, so you
-// don't have to hunt the long flat menu. Open with WildReach > Control Panel (Cmd+Shift+W),
-// then dock it next to the Inspector. Each button just runs the matching menu item, so the
-// underlying tools are unchanged.
+// Auto-discovering control panel. The [MenuItem("WildReach/...")] attributes are the SINGLE
+// source of truth — this window reflects over every one of them (via TypeCache) and renders a
+// button automatically, grouped by category. Add a tool and its button appears the moment it
+// compiles; delete a tool and its button disappears. No hand-maintained list, so nothing ever
+// goes stale or missing.
+//
+// Category comes from the menu path when it's namespaced ("WildReach/Forest/Build X" -> "Forest"),
+// otherwise it's inferred from keywords in the name. Migrate old flat items to "WildReach/Cat/Name"
+// over time and they'll self-organise here AND become submenus in the native WildReach menu.
 public class WildReachPanel : EditorWindow
 {
     Vector2 scroll;
+    string  filter = "";
+    List<Tool> tools;
+
+    struct Tool { public string category, label, execPath; public int prio; }
+
+    // category render order (anything not listed falls to the end, alphabetically)
+    static readonly string[] Order =
+    {
+        "Island & Terrain", "Forest", "Props", "Hero Tree",
+        "Character", "Creatures", "World", "Lighting", "HUD / UI", "Misc",
+    };
+
+    // keyword -> category, first match wins (for flat menu items without an explicit category)
+    static readonly (string kw, string cat)[] Keywords =
+    {
+        ("grass","Forest"), ("forest","Forest"), ("scatter","Forest"), ("blossom","Forest"),
+        ("canopy","Hero Tree"), ("hollowroot","Hero Tree"), ("mothertree","Hero Tree"), ("wisp","Hero Tree"), ("tree leaves","Hero Tree"), ("glow tree","Hero Tree"),
+        ("mushroom","Props"), ("moss","Props"), ("spiral","Props"), ("autumn","Props"),
+        ("hud","HUD / UI"), ("inventory","HUD / UI"), ("vitals","HUD / UI"),
+        ("climb","Character"), ("anim","Character"), ("player","Character"), ("azure","Character"), ("rig","Character"), ("jump","Character"), ("swim","Character"), ("gallery","Character"), ("clip","Character"), ("character","Character"),
+        ("water","World"), ("ship","World"), ("sail","World"),
+        ("creature","Creatures"), ("tortoise","Creatures"),
+        ("golden","Lighting"), ("cinematic","Lighting"), ("day-night","Lighting"), ("time","Lighting"), ("light","Lighting"),
+        ("island","Island & Terrain"), ("terrain","Island & Terrain"), ("ground","Island & Terrain"), ("texture","Island & Terrain"), ("sculpt","Island & Terrain"),
+    };
 
     [MenuItem("WildReach/Control Panel %#w", false, -100)]   // Cmd+Shift+W
     static void Open()
     {
         var w = GetWindow<WildReachPanel>("WildReach");
-        w.minSize = new Vector2(220, 360);
+        w.minSize = new Vector2(240, 400);
+        w.Rebuild();
+    }
+
+    void OnEnable() => Rebuild();
+    void OnFocus()  => Rebuild();   // catch tools added/removed since last focus
+
+    void Rebuild()
+    {
+        tools = new List<Tool>();
+        var seen = new HashSet<string>();
+        foreach (var mi in TypeCache.GetMethodsWithAttribute<MenuItem>())
+        {
+            foreach (var a in mi.GetCustomAttributes<MenuItem>(false))
+            {
+                string path = a.menuItem;
+                if (a.validate || string.IsNullOrEmpty(path) || !path.StartsWith("WildReach/")) continue;
+                string exec = StripHotkey(path);
+                if (exec.Contains("Control Panel") || !seen.Add(exec)) continue;
+
+                string rest = exec.Substring("WildReach/".Length);
+                int slash = rest.IndexOf('/');
+                string category, label;
+                if (slash >= 0) { category = rest.Substring(0, slash); label = rest.Substring(slash + 1); }
+                else            { label = rest; category = Infer(label); }
+
+                tools.Add(new Tool { category = category, label = label, execPath = exec, prio = a.priority });
+            }
+        }
+    }
+
+    static string StripHotkey(string path)
+    {
+        // a trailing " %#w" / " _g" shortcut token is not part of the executable menu path
+        return Regex.Replace(path, @"\s[%#&_]*[A-Za-z0-9]$", "").TrimEnd();
+    }
+
+    static string Infer(string label)
+    {
+        string l = label.ToLowerInvariant();
+        foreach (var (kw, cat) in Keywords) if (l.Contains(kw)) return cat;
+        return "Misc";
     }
 
     void OnGUI()
     {
+        if (tools == null) Rebuild();
+
+        // search bar
+        EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+        filter = GUILayout.TextField(filter, GUI.skin.FindStyle("ToolbarSearchTextField") ?? EditorStyles.toolbarTextField);
+        if (GUILayout.Button("✕", EditorStyles.toolbarButton, GUILayout.Width(22))) filter = "";
+        if (GUILayout.Button("⟳", EditorStyles.toolbarButton, GUILayout.Width(26))) Rebuild();
+        EditorGUILayout.EndHorizontal();
+
         scroll = EditorGUILayout.BeginScrollView(scroll);
 
-        Section("World / Terrain");
-        Btn("Reset Flat Terrain");
-        Btn("Setup Ground");
-        Btn("Setup Grass Details");
-        Btn("Setup World Colliders");
+        var shown = tools.Where(t => string.IsNullOrEmpty(filter) ||
+                                     t.label.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
 
-        Section("Lighting & Time");
-        Btn("Setup Golden Hour");
-        Btn("Setup Cinematic Post");
-        Btn("Setup Day-Night Cycle");
-        Row("Time - Day", "Time - Night");
+        foreach (var cat in shown.Select(t => t.category).Distinct().OrderBy(CatRank).ThenBy(c => c))
+        {
+            Section(cat);
+            foreach (var t in shown.Where(t => t.category == cat).OrderBy(t => t.prio).ThenBy(t => t.label))
+                if (GUILayout.Button(t.label, GUILayout.Height(22)))
+                    if (!EditorApplication.ExecuteMenuItem(t.execPath))
+                        Debug.LogWarning("[Panel] Could not execute: " + t.execPath);
+        }
 
-        Section("Character");
-        Btn("Setup Azure Character");
-        Btn("Swap In Azure Player");
-        Btn("Setup Jump Anim");
-        Btn("Setup Climb IK");
-        Btn("Debug Scale");
-
-        Section("Hero Tree (Hollowroot)");
-        Btn("Setup MotherTree Material");
-        Btn("Build Canopy");
-        Row("Build Blossom Cluster", "Build Wisp Drape");
-        Btn("Glow Tree Leaves");
-        Row("Add Tree Collider", "Save Tree Prefab");
-
-        Section("Environment Props");
-        Row("Setup Mushrooms", "Build Glowing Mushrooms");
-        Btn("Setup Moss Log");
-        Btn("Setup Spiral Tree");
-        Btn("Build Autumn Canopy");
-
-        Section("Forest");
-        Btn("Build Forest Tree");
-        Btn("Scatter Forest");
-        Btn("Build Blossom Tree");
-        Btn("Scatter Blossoms");
-
-        Section("Water");
-        Btn("Setup Water");
-
-        Section("Ship");
-        Btn("Setup Ship");
-        Btn("Setup Sailing");
-        Btn("Setup Swim Anim");
-
-        Section("Creatures");
-        Btn("Setup Creature");
-
-        GUILayout.Space(10);
-        EditorGUILayout.HelpBox("Buttons run the matching WildReach menu item. Dock me next to the Inspector.", MessageType.None);
+        GUILayout.Space(8);
+        EditorGUILayout.HelpBox($"{shown.Count} tools, auto-discovered from [MenuItem] attributes. " +
+                                "Name new tools WildReach/<Category>/<Tool> to group them.", MessageType.None);
         EditorGUILayout.EndScrollView();
     }
+
+    static int CatRank(string cat) { int i = Array.IndexOf(Order, cat); return i < 0 ? Order.Length : i; }
 
     static void Section(string title)
     {
         GUILayout.Space(8);
-        var style = new GUIStyle(EditorStyles.boldLabel) { fontSize = 12 };
-        EditorGUILayout.LabelField(title, style);
-        var r = EditorGUILayout.GetControlRect(false, 1);
-        EditorGUI.DrawRect(r, new Color(1, 1, 1, 0.15f));
+        EditorGUILayout.LabelField(title, new GUIStyle(EditorStyles.boldLabel) { fontSize = 12 });
+        EditorGUI.DrawRect(EditorGUILayout.GetControlRect(false, 1), new Color(1, 1, 1, 0.15f));
         GUILayout.Space(2);
-    }
-
-    static void Btn(string menu, string label = null)
-    {
-        if (GUILayout.Button(label ?? menu, GUILayout.Height(22)))
-            if (!EditorApplication.ExecuteMenuItem("WildReach/" + menu))
-                Debug.LogWarning($"[Panel] Menu item not found: WildReach/{menu}");
-    }
-
-    static void Row(string menuA, string menuB)
-    {
-        EditorGUILayout.BeginHorizontal();
-        if (GUILayout.Button(menuA, GUILayout.Height(22))) EditorApplication.ExecuteMenuItem("WildReach/" + menuA);
-        if (GUILayout.Button(menuB, GUILayout.Height(22))) EditorApplication.ExecuteMenuItem("WildReach/" + menuB);
-        EditorGUILayout.EndHorizontal();
     }
 }

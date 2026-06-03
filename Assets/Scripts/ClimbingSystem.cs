@@ -1,22 +1,29 @@
+using System;
 using UnityEngine;
 
-// Surface-anchored climbing. The body is never "pushed off" the wall (which lets it drift in) — instead,
-// every physics step we find the real surface point under the grip and PLACE the body at
-// surfacePoint + normal * bodyOffset. Positioning outward from the surface makes penetration impossible.
-// Movement slides the grip anchor along the surface tangent and re-projects it onto the rock each step.
+// Surface-conforming climbing. Every physics step we sample the rock around the grip with a small fan of
+// rays, average their normals (smooth — no single-bump jerk) and keep the real surface point under the grip
+// (so the body can't sink in). The whole body is then oriented to the wall plane — facing into the rock with
+// "up" running along the surface — so he hugs slabs, overhangs and curves like a climber instead of staying
+// bolt-upright. Hands/feet are pinned to the rock by ClimbIK on top of this.
 [RequireComponent(typeof(PlayerMovement), typeof(StaminaSystem))]
 public class ClimbingSystem : MonoBehaviour
 {
     [SerializeField] float climbSpeed   = 3f;
     [SerializeField] float grabDistance = 2.5f;   // reach to grab a wall
-    [SerializeField] float bodyOffset   = 0.45f;  // body centre sits this far off the surface (≈ capsule radius + gap)
+    [SerializeField] float bodyOffset   = 0.45f;  // body centre sits this far off the surface
     [SerializeField] float probeOut     = 0.6f;   // re-projection ray starts this far out from the surface
     [SerializeField] float probeDepth   = 1.2f;   // ...and searches this far back in
+    [SerializeField] float sampleSpread = 0.38f;  // how far out the fan rays sit (smooths the normal)
+    [SerializeField] float normalSmooth = 9f;     // surface-normal smoothing rate (higher = snappier)
+    [SerializeField] float rotSmooth    = 11f;    // body-orientation smoothing rate
+    [SerializeField] float posSmooth    = 22f;    // body-position smoothing rate
     [SerializeField] LayerMask climbMask = ~0;
 
     PlayerMovement movement;
     StaminaSystem stamina;
     Rigidbody rb;
+    CapsuleCollider body;
 
     bool isClimbing;
     Vector3 anchor;      // current grip point ON the surface
@@ -32,6 +39,7 @@ public class ClimbingSystem : MonoBehaviour
         movement = GetComponent<PlayerMovement>();
         stamina  = GetComponent<StaminaSystem>();
         rb       = GetComponent<Rigidbody>();
+        body     = GetComponent<CapsuleCollider>() ?? GetComponentInChildren<CapsuleCollider>();
     }
 
     void Update()
@@ -55,6 +63,7 @@ public class ClimbingSystem : MonoBehaviour
     void FixedUpdate()
     {
         if (!isClimbing) return;
+        float dt = Time.fixedDeltaTime;
 
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
@@ -62,20 +71,14 @@ public class ClimbingSystem : MonoBehaviour
         bool moving = Mathf.Abs(h) > 0.05f || Mathf.Abs(v) > 0.05f;
 
         // tangent basis on the surface (world-up reference keeps "up" intuitive)
-        Vector3 right  = Vector3.Cross(surfNormal, Vector3.up);
-        if (right.sqrMagnitude < 0.001f) right = transform.right;   // surface nearly horizontal — degenerate guard
-        right.Normalize();
-        Vector3 wallUp = Vector3.Cross(right, surfNormal).normalized;
+        TangentBasis(surfNormal, out var right, out var wallUp);
+        Vector3 desired = anchor + (right * h + wallUp * v) * climbSpeed * dt;
 
-        Vector3 move = (right * h + wallUp * v) * climbSpeed * Time.fixedDeltaTime;
-
-        // slide the anchor, then RE-PROJECT it onto the actual surface (follows curves, finds fresh normal)
-        Vector3 probeStart = anchor + move + surfNormal * probeOut;
-        if (Physics.Raycast(probeStart, -surfNormal, out var hit, probeOut + probeDepth, climbMask, QueryTriggerInteraction.Ignore)
-            && !hit.collider.transform.IsChildOf(transform))
+        // sample the surface around the new grip: keep the real point, average the normals
+        if (SampleSurface(desired, surfNormal, right, wallUp, out var pt, out var n))
         {
-            anchor = hit.point;
-            surfNormal = Vector3.Slerp(surfNormal, hit.normal, 0.25f).normalized;
+            anchor = pt;
+            surfNormal = Vector3.Slerp(surfNormal, n, SmoothT(normalSmooth, dt)).normalized;
             missFrames = 0;
         }
         else if (++missFrames > 10)        // ran off the edge / top of the climbable surface
@@ -84,16 +87,83 @@ public class ClimbingSystem : MonoBehaviour
             return;
         }
 
-        // PLACE the body off the surface — can't penetrate, because we build the position FROM the surface out
-        rb.MovePosition(anchor + surfNormal * bodyOffset);
+        // conform the WHOLE body to the wall: face into the rock, "up" along the surface
+        Vector3 fwd = -surfNormal;
+        Vector3 up  = Vector3.ProjectOnPlane(Vector3.up, surfNormal);
+        if (up.sqrMagnitude < 0.001f) up = Vector3.ProjectOnPlane(transform.forward, surfNormal);  // near-flat slab
+        up.Normalize();
+        Quaternion targetRot = Quaternion.LookRotation(fwd, up);
+        rb.MoveRotation(Quaternion.Slerp(transform.rotation, targetRot, SmoothT(rotSmooth, dt)));
 
-        // upright, facing the wall (yaw only — the hand/foot IK reaches the limbs to the rock)
-        Vector3 face = new Vector3(-surfNormal.x, 0f, -surfNormal.z).normalized;
-        if (face.sqrMagnitude > 0.001f)
-            rb.MoveRotation(Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(face, Vector3.up), 0.2f));
+        // ease toward the rest spot, then catch only DEEP penetration (body core inside the rock).
+        // A small core probe means normal grazing of the fat capsule doesn't trigger a push — so no
+        // vibration and no flinging him off the wall, while "whole body inside" is still impossible.
+        Vector3 targetPos = anchor + surfNormal * bodyOffset;
+        Vector3 newPos = Vector3.Lerp(transform.position, targetPos, SmoothT(posSmooth, dt));
+        newPos = PushOutOfSurface(newPos, targetRot);
+        rb.MovePosition(newPos);
 
-        if (moving) stamina.DrainClimb(Time.fixedDeltaTime);
+        if (moving) stamina.DrainClimb(dt);
     }
+
+    // Sweep the body capsule; if it overlaps rock, step it back out along the surface normal until clear.
+    Vector3 PushOutOfSurface(Vector3 pos, Quaternion rot)
+    {
+        if (body == null) return pos;
+        float scale = transform.lossyScale.x;
+        // SMALL core probe: only fires when the body's centre line is genuinely inside the rock,
+        // not when the wide capsule just touches the surface (that over-pushed him off the wall).
+        float r     = Mathf.Min(0.22f, body.radius * scale * 0.45f);
+        float half  = Mathf.Max(0f, body.height * 0.5f * scale - body.radius * scale);
+        Vector3 axis = rot * Vector3.up;
+
+        for (int step = 0; step < 14; step++)
+        {
+            Vector3 c  = pos + rot * Vector3.Scale(body.center, transform.lossyScale);
+            Vector3 p1 = c + axis * half, p2 = c - axis * half;
+            bool inside = false;
+            foreach (var col in Physics.OverlapCapsule(p1, p2, r, climbMask, QueryTriggerInteraction.Ignore))
+                if (col != body && !col.transform.IsChildOf(transform)) { inside = true; break; }
+            if (!inside) break;
+            pos += surfNormal * 0.04f;                          // nudge out and re-test
+        }
+        return pos;
+    }
+
+    // fan of rays around the grip: position from the centre hit (accurate, no sink), normal = average (smooth)
+    bool SampleSurface(Vector3 center, Vector3 n, Vector3 right, Vector3 up, out Vector3 pt, out Vector3 outN)
+    {
+        Span<Vector3> offsets = stackalloc Vector3[5]
+        { Vector3.zero, right * sampleSpread, -right * sampleSpread, up * sampleSpread, -up * sampleSpread };
+
+        Vector3 sumN = Vector3.zero; int hits = 0;
+        Vector3 centerHit = center; bool gotCenter = false;
+        for (int i = 0; i < offsets.Length; i++)
+        {
+            Vector3 start = center + offsets[i] + n * probeOut;
+            if (Physics.Raycast(start, -n, out var hit, probeOut + probeDepth, climbMask, QueryTriggerInteraction.Ignore)
+                && !hit.collider.transform.IsChildOf(transform))
+            {
+                sumN += hit.normal; hits++;
+                if (i == 0) { centerHit = hit.point; gotCenter = true; }
+            }
+        }
+        if (hits == 0) { pt = center; outN = n; return false; }
+        pt   = gotCenter ? centerHit : center;          // never average the position — that's what causes sink/float
+        outN = (sumN / hits).normalized;
+        return true;
+    }
+
+    static void TangentBasis(Vector3 n, out Vector3 right, out Vector3 up)
+    {
+        right = Vector3.Cross(n, Vector3.up);
+        if (right.sqrMagnitude < 0.001f) right = Vector3.Cross(n, Vector3.forward);  // surface ~horizontal
+        right.Normalize();
+        up = Vector3.Cross(right, n).normalized;
+    }
+
+    // frame-rate-independent smoothing factor
+    static float SmoothT(float rate, float dt) => 1f - Mathf.Exp(-rate * dt);
 
     bool DetectWall(out RaycastHit hit)
     {

@@ -9,12 +9,12 @@ public static class SetupWater
     const string Dir      = "Assets/Environment/Water/";
     const string MeshPath = Dir + "WaterPlane.mesh";
     const string MatPath  = Dir + "Water.mat";
-    const float  Size = 1000f; // metres across — a vast ocean that surrounds the island slice
-    const int    Res  = 300;   // grid subdivisions (301x301 verts) → ~3.3m quads so waves still sample near shore
+    const float  Size = 8000f; // metres across — a world-spanning ocean; islands drop into this one sheet
+    const int    Res  = 500;   // grid subdivisions (501x501 verts) → ~16m quads so waves still sample near shore
 
-    // Sea level (world Y). Tuned by eye: at 4.5 the island flooded; this sits the coastline lower.
-    // Other tools (Setup Ship) read this so the ship floats at the same surface.
-    public const float SeaLevel = 1.5f;
+    // Sea level (world Y). The ocean is the global sea plane at 0; islands are positioned so their
+    // coastline crosses Y=0. Other tools (Setup Ship) read this so the ship floats at the same surface.
+    public const float SeaLevel = 0f;
 
     // Centre of the island in X/Z, so the ocean (and the ship) sit on the slice rather than off in the void.
     public static Vector3 IslandCenter()
@@ -38,6 +38,7 @@ public static class SetupWater
         var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(MeshPath);
         if (mesh == null) { mesh = new Mesh { name = "WaterPlane" }; AssetDatabase.CreateAsset(mesh, MeshPath); }
         mesh.Clear();
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;  // >65k verts need 32-bit indices or the mesh truncates to a corner
         int n = Res + 1;
         var verts = new Vector3[n * n];
         var uvs   = new Vector2[n * n];
@@ -84,16 +85,19 @@ public static class SetupWater
         mr.sharedMaterial = mat;
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
-        // auto-place: centre on the island, sit at sea level
-        var c = IslandCenter();
-        go.transform.position = new Vector3(c.x, SeaLevel, c.z);
+        // The sea is global and follows the camera, so it reads as infinite. Start at origin; WaterFollow snaps it.
+        go.transform.position = new Vector3(0f, SeaLevel, 0f);
         go.transform.rotation = Quaternion.identity;
         go.transform.localScale = Vector3.one;
 
+        var follow = go.GetComponent<WaterFollow>();
+        if (follow == null) follow = go.AddComponent<WaterFollow>();
+        follow.seaLevel = SeaLevel;
+
         AssetDatabase.SaveAssets();
         Selection.activeGameObject = go;
-        Debug.Log($"[Water] Ocean built (1000m) and placed at island centre, sea level Y={SeaLevel}. " +
-                  $"If the island still floods or sits too high/dry, change SeaLevel in SetupWater.cs and re-run. " +
-                  $"If the material is PINK, the shader didn't compile.");
+        Debug.Log($"[Water] Infinite ocean ready: {Size}m plane (mesh bounds {mesh.bounds.size.x:0}m), " +
+                  $"32-bit indices, follows the camera at sea level Y={SeaLevel}. " +
+                  $"Position islands anywhere so their coastline crosses Y=0. PINK = shader didn't compile.");
     }
 }

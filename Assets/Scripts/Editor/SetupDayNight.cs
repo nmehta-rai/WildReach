@@ -25,7 +25,12 @@ public static class SetupDayNight
         so.FindProperty("moonIntensity").floatValue = 0.28f;
         so.FindProperty("nightAmbient").colorValue  = new Color(0.11f, 0.13f, 0.21f);
         so.FindProperty("nightFog").colorValue      = new Color(0.07f, 0.09f, 0.16f);
+        so.FindProperty("dayFog").colorValue        = new Color(0.74f, 0.82f, 0.90f);  // cool haze, not orange
         so.ApplyModifiedProperties();
+
+        // thinner fog so the ~1km island's mountains read clearly (the infinite ocean hides the edge now)
+        RenderSettings.fog = true;
+        RenderSettings.fogDensity = 0.0022f;
 
         Selection.activeGameObject = sun.gameObject;
         EditorUtility.SetDirty(dnc);

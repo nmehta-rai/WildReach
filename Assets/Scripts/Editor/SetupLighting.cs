@@ -25,11 +25,11 @@ public static class SetupLighting
         RenderSettings.ambientMode = AmbientMode.Flat;
         RenderSettings.ambientLight = new Color(0.55f, 0.48f, 0.42f);
 
-        // Warm distance fog = golden-hour depth + hides the terrain edge.
+        // Cool atmospheric distance haze (aerial perspective), thin so the mountains read.
         RenderSettings.fog = true;
-        RenderSettings.fogColor = new Color(0.98f, 0.74f, 0.55f);
+        RenderSettings.fogColor = new Color(0.74f, 0.82f, 0.90f);
         RenderSettings.fogMode = FogMode.ExponentialSquared;
-        RenderSettings.fogDensity = 0.0045f;
+        RenderSettings.fogDensity = 0.0022f;
 
         EditorUtility.SetDirty(light);
         Debug.Log("[Light] Golden hour set. Tweak the Directional Light's rotation X (sun height) " +
