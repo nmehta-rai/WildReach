@@ -68,9 +68,9 @@ public static class BuildGrassClumps
             float a = q * 60f * Mathf.Deg2Rad;
             Vector3 d = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * HalfW;
             int b = verts.Count;
-            verts.Add(-d);                       uvs.Add(new Vector2(0, 0));
-            verts.Add(+d);                       uvs.Add(new Vector2(1, 0));
-            verts.Add(+d + Vector3.up * Height); uvs.Add(new Vector2(1, 1));
+            verts.Add(-d);                      uvs.Add(new Vector2(0, 0));
+            verts.Add(d);                       uvs.Add(new Vector2(1, 0));
+            verts.Add(d + Vector3.up * Height); uvs.Add(new Vector2(1, 1));
             verts.Add(-d + Vector3.up * Height); uvs.Add(new Vector2(0, 1));
             for (int k = 0; k < 4; k++) norms.Add(Vector3.up);   // soft top-lit shading
             tris.Add(b); tris.Add(b + 2); tris.Add(b + 1);
