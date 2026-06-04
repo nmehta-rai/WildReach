@@ -36,6 +36,8 @@ public class IslandZone
     public string name = "Zone";
     [Tooltip("Identity + overlay colour while painting.")]
     public Color color = new Color(0.30f, 0.75f, 0.35f);
+    [Tooltip("Show this zone's painted region in the Scene overlay.")]
+    public bool showOverlay = true;
 
     [Tooltip("What scatters in this zone.")]
     public ScatterPalette palette;

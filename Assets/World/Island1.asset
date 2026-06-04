@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b063237dbedbe4600bdc1394af2968b6, type: 3}
+  m_Name: Island1
+  m_EditorClassIdentifier: Assembly-CSharp::IslandDefinition
+  terrainName: Island1_Terrain
+  seed: 12345
+  zones:
+  - name: Beach
+    color: {r: 0.45704538, g: 0.91663986, b: 0.98512095, a: 1}
+    showOverlay: 1
+    palette: {fileID: 0}
+    grass: 0
+    grassDensity: 0.7
+    slopeLimit: 32
+    clearance: 0
+  - name: Town
+    color: {r: 0.21492507, g: 0.85625225, b: 0.34336817, a: 1}
+    showOverlay: 1
+    palette: {fileID: 0}
+    grass: 1
+    grassDensity: 0.1041
+    slopeLimit: 32
+    clearance: 0
+  - name: Forrest
+    color: {r: 0.47401613, g: 0.25518698, b: 0.8891994, a: 1}
+    showOverlay: 1
+    palette: {fileID: 0}
+    grass: 1
+    grassDensity: 0.9177
+    slopeLimit: 32
+    clearance: 0
+  - name: Road
+    color: {r: 1, g: 0.627451, b: 0.4784314, a: 1}
+    showOverlay: 1
+    palette: {fileID: 0}
+    grass: 0
+    grassDensity: 0.7
+    slopeLimit: 32
+    clearance: 0
+  - name: Mountains
+    color: {r: 0.1645494, g: 0.46881178, b: 0.7682183, a: 1}
+    showOverlay: 1
+    palette: {fileID: 0}
+    grass: 0
+    grassDensity: 0.7
+    slopeLimit: 32
+    clearance: 0
+  zoneMap: {fileID: 2800000, guid: 981e6f42fef75453abd47ff24bcf2954, type: 2}
+  zoneMapRes: 512
+  groundTextures:
+  - {fileID: 0}

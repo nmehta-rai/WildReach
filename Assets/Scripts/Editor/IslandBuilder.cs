@@ -134,64 +134,54 @@ public static class IslandBuilder
     }
 
     // ---------------------------------------------------------------- grass
+    // Sets up the live, camera-windowed instanced grass field (no bake, no cap, per-zone live).
     public static void BuildGrass(IslandDefinition def)
     {
         var terrain = GetTerrain(def);
         if (terrain == null) { Debug.LogError("[Island] No terrain."); return; }
-        var px = ReadZones(def, out int res);
-        if (px == null) { Debug.LogError("[Island] No zone map — paint zones first."); return; }
+        if (def.zoneMap == null) { Debug.LogError("[Island] No zone map — paint zones first."); return; }
         var td = terrain.terrainData;
 
-        // 3D grass-clump prototypes (built by 'Build Grass Clumps')
-        var protos = new List<DetailPrototype>();
+        // wipe any old terrain-detail billboard grass left on the terrain
+        if (td.detailPrototypes.Length > 0) { td.detailPrototypes = new DetailPrototype[0]; EditorUtility.SetDirty(td); }
+
+        // clump meshes + material, loaded directly by path (prefab mesh refs can dangle)
+        var meshes = new List<Mesh>();
         for (int i = 1; i <= 3; i++)
         {
-            var go = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Environment/Grass/GrassClump_{i}.prefab");
-            if (go == null) continue;
-            protos.Add(new DetailPrototype
-            {
-                usePrototypeMesh = true, prototype = go, renderMode = DetailRenderMode.Grass,
-                healthyColor = new Color(0.85f, 1f, 0.7f), dryColor = new Color(0.7f, 0.85f, 0.5f),
-                minWidth = 0.8f, maxWidth = 1.5f, minHeight = 0.8f, maxHeight = 1.5f, noiseSpread = 0.5f,
-            });
+            var m = AssetDatabase.LoadAssetAtPath<Mesh>($"Assets/Environment/Grass/GrassClump_{i}.mesh");
+            if (m != null) meshes.Add(m);
         }
-        if (protos.Count == 0) { Debug.LogError("[Island] No grass clumps — run 'Build Grass Clumps' first."); return; }
+        var mat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Environment/Grass/GrassBlade.mat");
+        if (meshes.Count == 0 || mat == null)
+        { Debug.LogError($"[Island] grass assets missing (meshes={meshes.Count}, mat={(mat != null ? "ok" : "null")}) — run 'Build Grass Clumps' first."); return; }
+        mat.enableInstancing = true; EditorUtility.SetDirty(mat);
 
-        td.detailPrototypes = protos.ToArray();
-        int dres = 512; td.SetDetailResolution(dres, 16);
-        int w = td.detailWidth, h = td.detailHeight, gc = protos.Count;
-        const int MaxGrass = 6;
+        // per-zone on/off + density snapshot
+        int n = def.zones.Count;
+        var grassOn = new bool[n]; var dens = new float[n];
+        for (int i = 0; i < n; i++) { grassOn[i] = def.zones[i].grass; dens[i] = def.zones[i].grassDensity; }
 
-        var maps = new int[gc][,];
-        for (int k = 0; k < gc; k++) maps[k] = new int[h, w];
-        long filled = 0;
+        // create/reuse the field object; clear any old baked batch children
+        string goName = "IslandGrass_" + def.name;
+        var existing = GameObject.Find(goName);
+        var fieldGo = existing != null ? existing : new GameObject(goName);
+        if (existing == null) Undo.RegisterCreatedObjectUndo(fieldGo, "Grass Field");
+        else for (int c = fieldGo.transform.childCount - 1; c >= 0; c--) Object.DestroyImmediate(fieldGo.transform.GetChild(c).gameObject);
 
-        for (int dy = 0; dy < h; dy++)
-        for (int dx = 0; dx < w; dx++)
-        {
-            float u = (float)dx / (w - 1), v = (float)dy / (h - 1);
-            int zi = ZoneAt(px, res, terrain, terrain.transform.position.x + u * td.size.x,
-                                              terrain.transform.position.z + v * td.size.z);
-            if (zi < 0 || zi >= def.zones.Count) continue;
-            var z = def.zones[zi];
-            if (!z.grass || z.grassDensity <= 0f) continue;
+        var field = fieldGo.GetComponent<GrassField>() ?? fieldGo.AddComponent<GrassField>();
+        field.terrainName = def.terrainName;
+        field.zoneMap = def.zoneMap;
+        field.meshes = meshes.ToArray();
+        field.material = mat;
+        field.zoneGrass = grassOn;
+        field.zoneDensity = dens;
+        field.seed = def.seed;
+        field.Refresh();
+        EditorUtility.SetDirty(fieldGo);
 
-            float slope = td.GetSteepness(u, v);
-            float slopeF = 1f - Mathf.Clamp01((slope - 22f) / 23f);
-            if (slopeF <= 0f) continue;
-            float clump = Mathf.PerlinNoise(dx * 0.05f, dy * 0.05f);
-            int blades = Mathf.RoundToInt(z.grassDensity * slopeF * (0.45f + 0.55f * clump) * MaxGrass);
-            if (blades <= 0) continue;
-            int g = Mathf.Clamp(Mathf.FloorToInt(Mathf.PerlinNoise(dx * 0.02f + 9f, dy * 0.02f + 4f) * gc), 0, gc - 1);
-            maps[g][dy, dx] = blades; filled++;
-        }
-
-        for (int k = 0; k < gc; k++) td.SetDetailLayer(0, 0, k, maps[k]);
-        td.wavingGrassStrength = 0.25f; td.wavingGrassAmount = 0.35f; td.wavingGrassSpeed = 0.4f;
-        td.wavingGrassTint = new Color(0.75f, 0.85f, 0.55f);
-        terrain.drawTreesAndFoliage = true; terrain.detailObjectDistance = 250f; terrain.detailObjectDensity = 1f;
-
-        EditorUtility.SetDirty(td); AssetDatabase.SaveAssets();
-        Debug.Log($"[Island] Grass: filled {filled:N0} cells across grass zones ({gc} clump types).");
+        Selection.activeGameObject = fieldGo;
+        Debug.Log($"[Island] Grass: live instanced field set up ({meshes.Count} clump meshes). " +
+                  "Windowed around the camera — any zone size, no cap, per-zone live. Re-run after editing zones/density.");
     }
 }

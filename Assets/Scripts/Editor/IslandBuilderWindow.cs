@@ -22,6 +22,13 @@ public class IslandBuilderWindow : EditorWindow
 
     Color32[] cache;          // cached zone pixels for the overlay
     int       cacheRes;
+    int       strokePainted, strokeRejected;   // diagnostics for the current paint stroke
+    // overlay = a coarse terrain-conforming mesh textured with a full-res zone-colour map. The mesh
+    // only hugs the ground; boundary smoothness comes from BILINEAR sampling of the texture, so edges
+    // are smooth and colour-independent no matter how coarse the mesh is.
+    Mesh overlayMesh; int gridRes = -1, gridStep;
+    Texture2D zoneColTex; bool overlayDirty = true;
+    static Material _ovMat;
 
     [MenuItem("WildReach/World/Island Builder")]
     static void Open()
@@ -41,13 +48,19 @@ public class IslandBuilderWindow : EditorWindow
     {
         SceneView.duringSceneGui -= OnScene;
         paintZone = -1;
+        Save();
     }
+
+    // persist zone names/colours/palettes to disk so a recompile can't drop them
+    void OnLostFocus() => Save();
+    void Save() { if (def != null) { EditorUtility.SetDirty(def); AssetDatabase.SaveAssets(); } }
 
     void SetDef(IslandDefinition d)
     {
         def = d;
         so = d != null ? new SerializedObject(d) : null;
         cache = null;
+        gridRes = -1; overlayDirty = true;   // rebuild overlay geometry + colours for the new island
         paintZone = -1;
         if (d != null) EditorPrefs.SetString(PrefKey, AssetDatabase.GetAssetPath(d));
     }
@@ -98,13 +111,15 @@ public class IslandBuilderWindow : EditorWindow
                 if (GUILayout.Button("Clear", GUILayout.Width(54))) ClearZoneMap();
         }
         showOverlay = EditorGUILayout.ToggleLeft("Show zone overlay in Scene", showOverlay);
-        if (paintZone >= 0)
+        if (paintZone >= 0 && paintZone < def.zones.Count)
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             EditorGUILayout.LabelField($"PAINTING: {def.zones[paintZone].name}" + (erase ? "  (erasing)" : ""), EditorStyles.boldLabel);
-            brushRadius = EditorGUILayout.Slider("Brush radius (m)", brushRadius, 1f, 40f);
+            EditorGUI.BeginChangeCheck();
+            brushRadius = EditorGUILayout.Slider("Brush radius (m)", brushRadius, 1f, 150f);
+            if (EditorGUI.EndChangeCheck()) SceneView.RepaintAll();   // resize the brush gizmo live
             erase = EditorGUILayout.ToggleLeft("Erase", erase);
-            if (GUILayout.Button("Stop painting")) paintZone = -1;
+            if (GUILayout.Button("Stop painting")) { paintZone = -1; GUIUtility.ExitGUI(); }
             EditorGUILayout.EndVertical();
         }
     }
@@ -119,11 +134,18 @@ public class IslandBuilderWindow : EditorWindow
             using (new EditorGUILayout.HorizontalScope())
             {
                 z.color = EditorGUILayout.ColorField(GUIContent.none, z.color, false, false, false, GUILayout.Width(34));
+                z.showOverlay = GUILayout.Toggle(z.showOverlay, z.showOverlay ? "show" : "hide", "Button", GUILayout.Width(44));
                 z.name = EditorGUILayout.TextField(z.name);
                 bool on = paintZone == i;
                 bool now = GUILayout.Toggle(on, on ? "Painting" : "Paint", "Button", GUILayout.Width(70));
-                if (now != on) { paintZone = now ? i : -1; erase = false; }
-                if (GUILayout.Button("✕", GUILayout.Width(24))) { Undo.RecordObject(def, "remove zone"); def.zones.RemoveAt(i); EditorUtility.SetDirty(def); break; }
+                if (now != on)
+                {
+                    paintZone = now ? i : -1; erase = false;
+                    if (paintZone >= 0 && def.zoneMap == null) CreateZoneMap();   // no painting without a canvas
+                    GUIUtility.ExitGUI();   // bail this GUI pass cleanly so Layout/Repaint stay in sync
+                }
+                if (GUILayout.Button("✕", GUILayout.Width(24)))
+                { Undo.RecordObject(def, "remove zone"); def.zones.RemoveAt(i); paintZone = -1; EditorUtility.SetDirty(def); GUIUtility.ExitGUI(); }
             }
             z.palette = (ScatterPalette)EditorGUILayout.ObjectField("Palette", z.palette, typeof(ScatterPalette), false);
             using (new EditorGUILayout.HorizontalScope())
@@ -148,7 +170,7 @@ public class IslandBuilderWindow : EditorWindow
                 EditorUtility.SetDirty(def);
             }
         }
-        if (GUI.changed) EditorUtility.SetDirty(def);
+        if (GUI.changed) { EditorUtility.SetDirty(def); overlayDirty = true; }   // colour/visibility edits repaint the overlay
     }
 
     void TexturesSection()
@@ -207,6 +229,7 @@ public class IslandBuilderWindow : EditorWindow
         AssetDatabase.CreateAsset(tex, path);
         Undo.RecordObject(def, "zone map"); def.zoneMap = tex; cache = null;
         EditorUtility.SetDirty(def); AssetDatabase.SaveAssets();
+        Debug.Log($"[Island] zone map created: {res}px at {path}");
     }
 
     void ClearZoneMap()
@@ -233,19 +256,40 @@ public class IslandBuilderWindow : EditorWindow
         var terrain = IslandBuilder.GetTerrain(def);
         if (terrain == null) return;
 
-        if (showOverlay && def.zoneMap != null) DrawOverlay(terrain);
+        if (showOverlay && def.zoneMap != null && Event.current.type == EventType.Repaint) DrawOverlay(terrain);
 
         if (paintZone < 0 || paintZone >= def.zones.Count || def.zoneMap == null) return;
-        HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+
+        // Correct scene-view input pattern: one consistent control id, claimed as the default in
+        // Layout, with hotControl held for the whole stroke so Drag/Up reliably route back to us.
         var e = Event.current;
+        int id = GUIUtility.GetControlID(FocusType.Passive);
+        if (e.type == EventType.Layout) { HandleUtility.AddDefaultControl(id); return; }
+
         Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
-        if (Physics.Raycast(ray, out var hit, 1e6f) && hit.transform == terrain.transform)
+        bool over = Physics.Raycast(ray, out var hit, 1e6f) && hit.transform == terrain.transform;
+
+        if (over)   // bold, high-contrast brush so it's obvious on any ground colour
         {
-            Handles.color = erase ? Color.red : def.zones[paintZone].color;
-            Handles.DrawWireDisc(hit.point, Vector3.up, brushRadius);
-            if ((e.type == EventType.MouseDown || e.type == EventType.MouseDrag) && e.button == 0 && !e.alt)
-            { Stamp(terrain, hit.point); e.Use(); }
-            if (e.type == EventType.MouseUp && e.button == 0) Persist();
+            var col = erase ? Color.red : def.zones[paintZone].color;
+            var fill = col; fill.a = 0.25f;
+            Handles.color = fill;        Handles.DrawSolidDisc(hit.point, hit.normal, brushRadius);
+            Handles.color = Color.white; Handles.DrawWireDisc(hit.point, hit.normal, brushRadius, 3f);
+            Handles.color = col;         Handles.DrawWireDisc(hit.point, hit.normal, brushRadius * 0.96f, 1.5f);
+        }
+
+        switch (e.GetTypeForControl(id))
+        {
+            case EventType.MouseDown:
+                if (e.button == 0 && !e.alt && over)
+                { GUIUtility.hotControl = id; strokePainted = strokeRejected = 0; Stamp(terrain, hit.point); e.Use(); }
+                break;
+            case EventType.MouseDrag:
+                if (GUIUtility.hotControl == id && over) { Stamp(terrain, hit.point); e.Use(); }
+                break;
+            case EventType.MouseUp:
+                if (GUIUtility.hotControl == id) { GUIUtility.hotControl = 0; Persist(); e.Use(); }
+                break;
         }
         sv.Repaint();
     }
@@ -259,6 +303,7 @@ public class IslandBuilderWindow : EditorWindow
         int cx = Mathf.RoundToInt(u * (res - 1)), cy = Mathf.RoundToInt(v * (res - 1));
         int rad = Mathf.Max(1, Mathf.CeilToInt(brushRadius / size.x * res));
         byte val = erase ? (byte)0 : (byte)(paintZone + 1);
+        float seaY = SeaY();
 
         if (cache == null || cacheRes != res) { cache = def.zoneMap.GetPixels32(); cacheRes = res; }
         for (int dy = -rad; dy <= rad; dy++)
@@ -267,9 +312,23 @@ public class IslandBuilderWindow : EditorWindow
             if (dx * dx + dy * dy > rad * rad) continue;
             int X = cx + dx, Y = cy + dy;
             if (X < 0 || X >= res || Y < 0 || Y >= res) continue;
+            if (!erase)   // only paint actual LAND — never the ocean
+            {
+                float wx = tpos.x + (X + 0.5f) / res * size.x;
+                float wz = tpos.z + (Y + 0.5f) / res * size.z;
+                if (terrain.SampleHeight(new Vector3(wx, 0, wz)) + tpos.y < seaY) { strokeRejected++; continue; }
+            }
             cache[Y * res + X] = new Color32(val, 0, 0, 255);
+            strokePainted++;
         }
         def.zoneMap.SetPixels32(cache); def.zoneMap.Apply();
+        overlayDirty = true;
+    }
+
+    static float SeaY()
+    {
+        var w = GameObject.Find("Water");
+        return w != null ? w.transform.position.y : 30f;   // matches the island's sea level
     }
 
     void Persist()
@@ -277,26 +336,96 @@ public class IslandBuilderWindow : EditorWindow
         if (def.zoneMap == null) return;
         EditorUtility.SetDirty(def.zoneMap);
         AssetDatabase.SaveAssets();
+        if (strokePainted + strokeRejected > 0)
+        {
+            Debug.Log($"[Island] stroke: painted {strokePainted} cells, rejected {strokeRejected} as ocean (sea Y={SeaY():0.#}). " +
+                      (strokePainted == 0 ? "NOTHING painted — the land gate thinks this is below sea level." : ""));
+            strokePainted = strokeRejected = 0;
+        }
+    }
+
+    static Material OverlayMat
+    {
+        get
+        {
+            if (_ovMat == null)
+                _ovMat = new Material(Shader.Find("Hidden/WildReach/ZoneOverlay")) { hideFlags = HideFlags.HideAndDontSave };
+            return _ovMat;
+        }
     }
 
     void DrawOverlay(Terrain terrain)
     {
         int res = def.zoneMap.width;
-        if (cache == null || cacheRes != res) { cache = def.zoneMap.GetPixels32(); cacheRes = res; }
+        if (cache == null || cacheRes != res) { cache = def.zoneMap.GetPixels32(); cacheRes = res; overlayDirty = true; }
+        EnsureOverlayMesh(terrain, res);
+        EnsureZoneTex(res);
+        if (overlayMesh == null || zoneColTex == null) return;
+        var m = OverlayMat; m.mainTexture = zoneColTex; m.SetPass(0);
+        Graphics.DrawMeshNow(overlayMesh, Matrix4x4.identity);
+    }
+
+    // coarse mesh that just hugs the terrain, UV-mapped to the zone map. Rebuilt only when island/res changes.
+    void EnsureOverlayMesh(Terrain terrain, int res)
+    {
+        int step = Mathf.Max(1, res / 64);
+        if (gridRes == res && gridStep == step && overlayMesh != null) return;
         var tpos = terrain.transform.position; var size = terrain.terrainData.size;
-        int step = Mathf.Max(1, res / 56);              // ~56x56 samples
-        float disc = size.x / res * step * 0.6f;
-        for (int y = 0; y < res; y += step)
-        for (int x = 0; x < res; x += step)
+
+        var xs = new System.Collections.Generic.List<int>();
+        for (int x = 0; x < res; x += step) xs.Add(x);
+        if (xs[xs.Count - 1] != res - 1) xs.Add(res - 1);
+        var ys = new System.Collections.Generic.List<int>();
+        for (int y = 0; y < res; y += step) ys.Add(y);
+        if (ys[ys.Count - 1] != res - 1) ys.Add(res - 1);
+
+        int gw = xs.Count, gh = ys.Count;
+        var verts = new Vector3[gw * gh];
+        var uvs = new Vector2[gw * gh];
+        for (int j = 0; j < gh; j++)
+        for (int i = 0; i < gw; i++)
         {
-            int zi = cache[y * res + x].r - 1;
-            if (zi < 0 || zi >= def.zones.Count) continue;
-            float wx = tpos.x + (x + 0.5f) / res * size.x;
-            float wz = tpos.z + (y + 0.5f) / res * size.z;
-            float wy = terrain.SampleHeight(new Vector3(wx, 0, wz)) + tpos.y + 0.15f;
-            var c = def.zones[zi].color; c.a = 0.4f; Handles.color = c;
-            Handles.DrawSolidDisc(new Vector3(wx, wy, wz), Vector3.up, disc);
+            float u = (xs[i] + 0.5f) / res, v = (ys[j] + 0.5f) / res;
+            float wx = tpos.x + u * size.x, wz = tpos.z + v * size.z;
+            verts[j * gw + i] = new Vector3(wx, terrain.SampleHeight(new Vector3(wx, 0, wz)) + tpos.y + 0.15f, wz);
+            uvs[j * gw + i] = new Vector2(u, v);
         }
+        var tris = new System.Collections.Generic.List<int>((gw - 1) * (gh - 1) * 6);
+        for (int j = 0; j < gh - 1; j++)
+        for (int i = 0; i < gw - 1; i++)
+        {
+            int a = j * gw + i, b = a + 1, c = a + gw, d = c + 1;
+            tris.Add(a); tris.Add(c); tris.Add(b);
+            tris.Add(b); tris.Add(c); tris.Add(d);
+        }
+        if (overlayMesh == null) overlayMesh = new Mesh { hideFlags = HideFlags.HideAndDontSave };
+        overlayMesh.Clear();
+        overlayMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+        overlayMesh.vertices = verts; overlayMesh.uv = uvs; overlayMesh.triangles = tris.ToArray();
+        overlayMesh.RecalculateBounds();
+        gridRes = res; gridStep = step;
+    }
+
+    // full-res zone-colour texture (bilinear) — rebuilt only when the paint actually changes
+    void EnsureZoneTex(int res)
+    {
+        if (zoneColTex == null || zoneColTex.width != res)
+        {
+            zoneColTex = new Texture2D(res, res, TextureFormat.RGBA32, false, true)
+            { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.HideAndDontSave };
+            overlayDirty = true;
+        }
+        if (!overlayDirty) return;
+        var dst = new Color32[res * res];
+        for (int i = 0; i < dst.Length; i++)
+        {
+            int zi = cache[i].r - 1;
+            if (zi < 0 || zi >= def.zones.Count || !def.zones[zi].showOverlay) { dst[i] = new Color32(0, 0, 0, 0); continue; }
+            var c = Color.Lerp(def.zones[zi].color, Color.white, 0.15f); c.a = 0.55f;
+            dst[i] = c;
+        }
+        zoneColTex.SetPixels32(dst); zoneColTex.Apply();
+        overlayDirty = false;
     }
 
     static void Header(string t)
