@@ -36,7 +36,7 @@ public class CameraFollow : MonoBehaviour
     {
         yaw += Input.GetAxis("Mouse X") * sensitivity;
         pitch -= Input.GetAxis("Mouse Y") * sensitivity;
-        pitch = Mathf.Clamp(pitch, -10f, 70f);
+        pitch = Mathf.Clamp(pitch, -65f, 75f);   // lower bound opened up so you can crane right up into the sky
 
         Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);
         Vector3 rawPivot = target.position + Vector3.up * heightOffset;

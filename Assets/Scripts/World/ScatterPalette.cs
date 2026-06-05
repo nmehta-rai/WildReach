@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-// A reusable bag of "what scatters here, and how much" — e.g. a "Temperate Forest" palette of
-// trees + bushes + mushrooms with their counts and rules. Drop the SAME palette onto a zone of
-// any island. This is the literal answer to "which trees, how many".
+// A reusable bag of "what scatters here, and how dense" — e.g. a "Temperate Forest" palette of
+// trees + mushrooms with their spacing/density and rules. Drop the SAME palette onto a zone of any
+// island. Density is spacing + a keep-probability, so it scales to any zone size (the same answer
+// the live grass uses) and "rare" things (blossom trees) are just a low density.
 [CreateAssetMenu(menuName = "WildReach/Scatter Palette", fileName = "Palette")]
 public class ScatterPalette : ScriptableObject
 {
@@ -15,15 +16,19 @@ public class ScatterPalette : ScriptableObject
 public class ScatterEntry
 {
     public GameObject prefab;
-    [Min(0)] public int count = 20;       // how many of this prefab in a zone using this palette
+    [Tooltip("Grid spacing in metres between candidate spots — bigger = sparser.")]
+    public float spacing = 8f;
+    [Range(0f, 1f), Tooltip("Density: chance a candidate spot is used. Low = rare (e.g. blossom trees).")]
+    public float density = 0.6f;
     public float minScale = 0.85f;
     public float maxScale = 1.25f;
-    public float spacing  = 4f;            // min distance between this prefab's own instances
-    public float slopeLimit = 35f;         // skip ground steeper than this (deg)
+    public float slopeLimit = 35f;
 
     [Header("Placement")]
-    public bool  groundSit = false;        // drop so the mesh bottom rests on soil (props); else base at ground (trees)
+    public bool  groundSit = false;        // drop so the mesh bottom rests on soil (props), else base at ground
     public float normalizeHeight = 0f;     // >0: scale to this height in metres (raw fbx like the moss log)
+    [Tooltip("Cluster near already-placed open-ground props (e.g. mushrooms at tree bases), not open ground.")]
+    public bool  nearProps = false;
 
     public string Label => prefab != null ? prefab.name : "(empty)";
 }

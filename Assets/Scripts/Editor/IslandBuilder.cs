@@ -37,8 +37,9 @@ public static class IslandBuilder
         return px[y * res + x].r - 1;
     }
 
-    // ---------------------------------------------------------------- vegetation
-    public static void BuildVegetation(IslandDefinition def)
+    // ---------------------------------------------------------------- vegetation / scatter
+    // onlyZone == -1 builds (and wipes) all zones; >=0 rebuilds just that zone, leaving others alone.
+    public static void BuildVegetation(IslandDefinition def, int onlyZone = -1)
     {
         var terrain = GetTerrain(def);
         if (terrain == null) { Debug.LogError("[Island] No terrain '" + (def ? def.terrainName : "?") + "'."); return; }
@@ -49,52 +50,217 @@ public static class IslandBuilder
         var hero = GameObject.Find("HomeTree");
         Vector3 heroPos = hero != null ? hero.transform.position : new Vector3(1e9f, 0, 1e9f);
 
-        string rootName = "IslandBuild_" + def.name;
-        var existing = GameObject.Find(rootName);
-        if (existing != null) Object.DestroyImmediate(existing);
-        var root = new GameObject(rootName);
-        Undo.RegisterCreatedObjectUndo(root, "Build Island Vegetation");
+        string rootName = "IslandScatter_" + def.name;
+        if (onlyZone < 0)   // full build also clears legacy containers
+            foreach (var name in new[] { "IslandBuild_" + def.name, "ForestSlice", rootName })
+            { var g = GameObject.Find(name); if (g != null) Object.DestroyImmediate(g); }
 
-        Random.InitState(def.seed);
-        int total = 0;
+        var root = GameObject.Find(rootName);
+        if (root == null) { root = new GameObject(rootName); Undo.RegisterCreatedObjectUndo(root, "Build Scatter"); }
 
-        for (int zi = 0; zi < def.zones.Count; zi++)
+        int from = onlyZone < 0 ? 0 : onlyZone;
+        int to   = onlyZone < 0 ? def.zones.Count : onlyZone + 1;
+        Random.InitState(def.seed + 1234 + from * 7);
+
+        var cache = new Dictionary<GameObject, Combined>();
+        int total = 0, instanced = 0;
+
+        for (int zi = from; zi < to; zi++)
         {
+            if (zi < 0 || zi >= def.zones.Count) continue;
             var z = def.zones[zi];
+            var old = root.transform.Find(z.name);
+            if (old != null) Object.DestroyImmediate(old.gameObject);   // rebuild just this zone
             if (z.palette == null || z.palette.entries.Count == 0) continue;
+
             var zoneRoot = new GameObject(z.name);
             zoneRoot.transform.SetParent(root.transform, false);
+            var anchors = new List<Vector3>();                 // open-ground props -> mushrooms cluster near these
+            var groups  = new List<ScatterField.Group>();      // instanced (windowed) layers for this zone
 
+            // PASS 1: open-ground props (trees, logs) -> windowed INSTANCED, not GameObjects
             foreach (var e in z.palette.entries)
             {
-                if (e.prefab == null) continue;
-                float baseScale = NormalizeScale(e);
+                if (e.prefab == null || e.nearProps) continue;
+                var cm = GetCombined(e.prefab, cache);
+                if (cm.mesh == null) continue;
+                float normScale = (e.normalizeHeight > 0f && cm.bounds.size.y > 0.01f) ? e.normalizeHeight / cm.bounds.size.y : 0f;
                 float slopeCap = Mathf.Min(z.slopeLimit, e.slopeLimit);
-                var mine = new List<Vector3>();
-                int made = 0, tries = 0, cap = Mathf.Max(40, e.count * 40);
+                float sp = Mathf.Max(1f, e.spacing);
+                var mats = new List<Matrix4x4>(); var posL = new List<Vector3>(); var sclL = new List<float>();
 
-                while (made < e.count && tries < cap)
+                for (float gz = tpos.z; gz < tpos.z + td.size.z; gz += sp)
+                for (float gx = tpos.x; gx < tpos.x + td.size.x; gx += sp)
                 {
-                    tries++;
-                    float x = tpos.x + Random.value * td.size.x;
-                    float zc = tpos.z + Random.value * td.size.z;
+                    float x = gx + Random.Range(-sp * 0.4f, sp * 0.4f);
+                    float zc = gz + Random.Range(-sp * 0.4f, sp * 0.4f);
                     if (ZoneAt(px, res, terrain, x, zc) != zi) continue;
-
                     float nx = (x - tpos.x) / td.size.x, nz = (zc - tpos.z) / td.size.z;
+                    if (nx < 0 || nx > 1 || nz < 0 || nz > 1) continue;
                     if (td.GetSteepness(nx, nz) > slopeCap) continue;
                     if (z.clearance > 0f && new Vector2(x - heroPos.x, zc - heroPos.z).magnitude < z.clearance) continue;
-                    if (mine.Any(p => new Vector2(x - p.x, zc - p.z).magnitude < e.spacing)) continue;
+                    if (Random.value > e.density) continue;
 
-                    Place(e, x, zc, terrain, tpos, baseScale, zoneRoot.transform);
-                    mine.Add(new Vector3(x, 0, zc));
-                    made++; total++;
+                    float instS = (normScale > 0f ? normScale : 1f) * Random.Range(e.minScale, e.maxScale);
+                    float gy = terrain.SampleHeight(new Vector3(x, 0, zc)) + tpos.y;
+                    float y = e.groundSit ? gy - cm.bounds.min.y * instS : gy - 0.1f;
+                    var wp = new Vector3(x, y, zc);
+                    mats.Add(Matrix4x4.TRS(wp, Quaternion.AngleAxis(Random.value * 360f, Vector3.up), Vector3.one * instS));
+                    posL.Add(wp); sclL.Add(instS);
+                    anchors.Add(new Vector3(x, gy, zc));
+                    total++; instanced++;
                 }
-                Debug.Log($"[Island] {z.name}/{e.Label}: {made}/{e.count}");
+
+                if (mats.Count == 0) continue;
+                foreach (var m in cm.mats) if (m != null) { m.enableInstancing = true; EditorUtility.SetDirty(m); }
+                groups.Add(new ScatterField.Group
+                {
+                    name = e.prefab.name, mesh = cm.mesh, materials = cm.mats,
+                    instances = mats.ToArray(), positions = posL.ToArray(), scales = sclL.ToArray(),
+                    collide = cm.bounds.size.y > cm.bounds.size.x * 1.3f,            // tall = tree -> trunk capsule
+                    colRadius = Mathf.Clamp(cm.bounds.size.x * 0.05f, 0.35f, 0.7f),
+                    colHeight = Mathf.Max(2f, cm.bounds.size.y),
+                    colCenterY = cm.bounds.center.y,
+                });
+            }
+
+            // PASS 2: near-props (mushrooms, which carry glow lights) -> GameObjects around the anchors, upright
+            foreach (var e in z.palette.entries)
+            {
+                if (e.prefab == null || !e.nearProps) continue;
+                float baseScale = NormalizeScale(e);
+                float slopeCap = Mathf.Min(z.slopeLimit, e.slopeLimit);
+                foreach (var anchor in anchors)
+                {
+                    if (Random.value > e.density) continue;          // density = chance this prop gets a mushroom
+                    float ang = Random.value * Mathf.PI * 2f, rr = Random.Range(0.8f, 2.6f);
+                    float x = anchor.x + Mathf.Cos(ang) * rr, zc = anchor.z + Mathf.Sin(ang) * rr;
+                    if (ZoneAt(px, res, terrain, x, zc) != zi) continue;
+                    float nx = (x - tpos.x) / td.size.x, nz = (zc - tpos.z) / td.size.z;
+                    if (nx < 0 || nx > 1 || nz < 0 || nz > 1) continue;
+                    if (td.GetSteepness(nx, nz) > slopeCap) continue;
+                    Place(e, x, zc, terrain, tpos, baseScale, zoneRoot.transform);
+                    total++;
+                }
+            }
+
+            if (groups.Count > 0)
+            {
+                var sf = zoneRoot.AddComponent<ScatterField>();
+                sf.groups = groups.ToArray();
             }
         }
 
         Selection.activeGameObject = root;
-        Debug.Log($"[Island] '{def.name}': scattered {total} props across {def.zones.Count} zone(s). Deterministic (seed {def.seed}).");
+        Debug.Log($"[Island] Scatter: {total} props ({instanced} instanced) {(onlyZone < 0 ? "across all zones" : "in '" + def.zones[onlyZone].name + "'")}. Trees/logs render windowed around the camera (no cap).");
+    }
+
+    // ---- per-prefab mesh merge (a tree's own ~30 parts -> one instanceable mesh; cached, reversible) ----
+    struct Combined { public Mesh mesh; public Material[] mats; public Bounds bounds; }
+
+    static Combined GetCombined(GameObject prefab, Dictionary<GameObject, Combined> cache)
+    {
+        if (cache.TryGetValue(prefab, out var c)) return c;
+        var mesh = CombinePrefab(prefab, out var mats);
+        c = new Combined { mesh = mesh, mats = mats, bounds = mesh != null ? mesh.bounds : new Bounds() };
+        cache[prefab] = c;
+        return c;
+    }
+
+    static Mesh CombinePrefab(GameObject prefab, out Material[] mats)
+    {
+        var inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+        inst.transform.position = Vector3.zero;   // keep design rotation + scale, bake at world origin
+        var byMat = new Dictionary<Material, List<CombineInstance>>();
+        foreach (var mf in inst.GetComponentsInChildren<MeshFilter>())
+        {
+            var mr = mf.GetComponent<MeshRenderer>();
+            if (mf.sharedMesh == null || mr == null || !mr.enabled) continue;
+            var sm = mr.sharedMaterials;
+            for (int s = 0; s < mf.sharedMesh.subMeshCount; s++)
+            {
+                var mat = s < sm.Length ? sm[s] : (sm.Length > 0 ? sm[sm.Length - 1] : null);
+                if (mat == null) continue;
+                if (!byMat.TryGetValue(mat, out var list)) { list = new List<CombineInstance>(); byMat[mat] = list; }
+                list.Add(new CombineInstance { mesh = mf.sharedMesh, subMeshIndex = s, transform = mf.transform.localToWorldMatrix });
+            }
+        }
+        var perMat = new List<Mesh>(); var matList = new List<Material>();
+        foreach (var kv in byMat)
+        {
+            var m = new Mesh { indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+            m.CombineMeshes(kv.Value.ToArray(), true, true);   // merge all of this material's parts
+            perMat.Add(m); matList.Add(kv.Key);
+        }
+        var fc = new CombineInstance[perMat.Count];
+        for (int i = 0; i < perMat.Count; i++) fc[i] = new CombineInstance { mesh = perMat[i], transform = Matrix4x4.identity };
+        var final = new Mesh { indexFormat = UnityEngine.Rendering.IndexFormat.UInt32, name = prefab.name + "_inst" };
+        final.CombineMeshes(fc, false, false);    // one submesh per material
+        final.RecalculateBounds();
+        Object.DestroyImmediate(inst);
+        mats = matList.ToArray();
+        return final;
+    }
+
+    // Removes scattered props (current + legacy containers) without rebuilding.
+    public static void ClearScatter(IslandDefinition def)
+    {
+        int n = 0;
+        foreach (var name in new[] { "IslandScatter_" + def.name, "IslandBuild_" + def.name, "ForestSlice" })
+        { var g = GameObject.Find(name); if (g != null) { Object.DestroyImmediate(g); n++; } }
+        Debug.Log($"[Island] Cleared {n} scatter container(s).");
+    }
+
+    // ---------------------------------------------------------------- mobs
+    // Place a zone's assigned mob across that zone and bind each to roam it. A scene object with count 1 is
+    // bound in place; otherwise count copies are spawned at random in-zone spots under a "Mobs_<island>" root.
+    public static void PlaceMobs(IslandDefinition def, int zoneIndex)
+    {
+        var z = def.zones[zoneIndex];
+        if (z.mob == null) { Debug.LogWarning($"[Mobs] Zone '{z.name}' has no mob assigned."); return; }
+        var terrain = GetTerrain(def);
+        if (terrain == null) { Debug.LogWarning("[Mobs] No terrain."); return; }
+        var px = ReadZones(def, out int res);
+        if (px == null) { Debug.LogWarning("[Mobs] No zone map painted yet."); return; }
+
+        bool isAsset = EditorUtility.IsPersistent(z.mob);   // a prefab asset vs an in-scene object
+        int n = Mathf.Max(1, z.mobCount);
+
+        if (!isAsset && n == 1) { BindMob(z.mob, def, z.name); Debug.Log($"[Mobs] Bound '{z.mob.name}' to roam '{z.name}'."); return; }
+
+        var root = GameObject.Find("Mobs_" + def.name) ?? new GameObject("Mobs_" + def.name);
+        var tpos = terrain.transform.position; var size = terrain.terrainData.size;
+        int placed = 0;
+        for (int k = 0; k < n; k++)
+        {
+            Vector3 spot = Vector3.zero; bool found = false;
+            for (int tries = 0; tries < 64 && !found; tries++)
+            {
+                float wx = tpos.x + (float)Random.value * size.x, wz = tpos.z + (float)Random.value * size.z;
+                if (ZoneAt(px, res, terrain, wx, wz) != zoneIndex) continue;
+                spot = new Vector3(wx, terrain.SampleHeight(new Vector3(wx, 0, wz)) + tpos.y, wz); found = true;
+            }
+            if (!found) continue;
+            var inst = isAsset ? (GameObject)PrefabUtility.InstantiatePrefab(z.mob) : Object.Instantiate(z.mob);
+            inst.name = z.mob.name + "_" + z.name + (n > 1 ? "_" + (k + 1) : "");
+            inst.transform.SetParent(root.transform, true);
+            inst.transform.position = spot;
+            inst.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+            BindMob(inst, def, z.name);
+            placed++;
+        }
+        Debug.Log($"[Mobs] Placed {placed}/{n} of '{z.mob.name}' to roam '{z.name}'.");
+    }
+
+    static void BindMob(GameObject go, IslandDefinition def, string zoneName)
+    {
+        var pred = go.GetComponent<Predator>();
+        if (pred != null) { pred.Configure(def, zoneName); EditorUtility.SetDirty(pred); return; }
+        var cw = go.GetComponent<CreatureWander>();                 // old free-roam would fight the zone roamer
+        if (cw != null) cw.enabled = false;
+        var roamer = go.GetComponent<ZoneRoamer>() ?? Undo.AddComponent<ZoneRoamer>(go);
+        roamer.Configure(def, zoneName, def.terrainName);
+        EditorUtility.SetDirty(roamer);
     }
 
     static float NormalizeScale(ScatterEntry e)

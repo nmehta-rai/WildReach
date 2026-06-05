@@ -49,4 +49,10 @@ public class IslandZone
     [Header("Rules")]
     public float slopeLimit = 32f;   // no scatter on ground steeper than this (deg)
     public float clearance  = 0f;    // keep this far from 'HomeTree' (0 = ignore)
+
+    [Header("Mob (roams this whole zone)")]
+    [Tooltip("Creature placed into this zone — a prefab, or an existing scene object. It gets bound to roam this zone freely.")]
+    public GameObject mob;
+    [Tooltip("How many of the mob to place across the zone.")]
+    public int mobCount = 1;
 }

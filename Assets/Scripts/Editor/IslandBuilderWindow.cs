@@ -147,7 +147,12 @@ public class IslandBuilderWindow : EditorWindow
                 if (GUILayout.Button("✕", GUILayout.Width(24)))
                 { Undo.RecordObject(def, "remove zone"); def.zones.RemoveAt(i); paintZone = -1; EditorUtility.SetDirty(def); GUIUtility.ExitGUI(); }
             }
-            z.palette = (ScatterPalette)EditorGUILayout.ObjectField("Palette", z.palette, typeof(ScatterPalette), false);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                z.palette = (ScatterPalette)EditorGUILayout.ObjectField("Palette", z.palette, typeof(ScatterPalette), false);
+                using (new EditorGUI.DisabledScope(z.palette == null))
+                    if (GUILayout.Button("Scatter", GUILayout.Width(70))) IslandBuilder.BuildVegetation(def, i);
+            }
             using (new EditorGUILayout.HorizontalScope())
             {
                 z.grass = EditorGUILayout.ToggleLeft("Grass", z.grass, GUILayout.Width(60));
@@ -158,6 +163,13 @@ public class IslandBuilderWindow : EditorWindow
             {
                 z.slopeLimit = EditorGUILayout.FloatField("Slope limit", z.slopeLimit);
                 z.clearance  = EditorGUILayout.FloatField("Hero clear", z.clearance);
+            }
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                z.mob = (GameObject)EditorGUILayout.ObjectField("Mob", z.mob, typeof(GameObject), true);
+                z.mobCount = Mathf.Max(1, EditorGUILayout.IntField(z.mobCount, GUILayout.Width(40)));
+                using (new EditorGUI.DisabledScope(z.mob == null))
+                    if (GUILayout.Button("Place", GUILayout.Width(70))) IslandBuilder.PlaceMobs(def, i);
             }
             EditorGUILayout.EndVertical();
         }
@@ -190,9 +202,13 @@ public class IslandBuilderWindow : EditorWindow
             if (GUILayout.Button("Build Vegetation", GUILayout.Height(26))) IslandBuilder.BuildVegetation(def);
             if (GUILayout.Button("Build Grass", GUILayout.Height(26)))      IslandBuilder.BuildGrass(def);
         }
-        if (GUILayout.Button("Build Island (both)", GUILayout.Height(24)))
-        { IslandBuilder.BuildVegetation(def); IslandBuilder.BuildGrass(def); }
-        EditorGUILayout.HelpBox("Vegetation is deterministic (seed). Re-run any time; it wipes its own output first.", MessageType.None);
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("Build Island (both)", GUILayout.Height(24)))
+            { IslandBuilder.BuildVegetation(def); IslandBuilder.BuildGrass(def); }
+            if (GUILayout.Button("Clear Scatter", GUILayout.Width(110), GUILayout.Height(24))) IslandBuilder.ClearScatter(def);
+        }
+        EditorGUILayout.HelpBox("Per-zone: hit a zone's Scatter button. 'Clear Scatter' removes old props (incl. legacy ForestSlice). Deterministic by seed.", MessageType.None);
     }
 
     // ----------------------------------------------------------------- actions

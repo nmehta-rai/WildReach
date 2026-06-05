@@ -1,29 +1,27 @@
 using UnityEngine;
 using UnityEditor;
 
-// One-shot convenience: drops a ready-to-use Island1 + a "TemperateForest" scatter palette wired
-// to the forest prefabs we already have, so the very first time you open the Island Builder you
-// can just Create the zone map, paint the Forest zone, and Build. Re-runnable (overwrites).
+// Builds the reusable "TemperateForest" scatter palette (and, optionally, a starter island).
+// 'Setup Forest Palette' only touches the palette asset — safe to run on an island you've already
+// zoned. Assign the palette to your Forest zone, then hit that zone's Scatter button.
 public static class CreateStarterIsland
 {
-    const string Dir = "Assets/World";
+    const string Dir         = "Assets/World";
+    const string PalettePath = Dir + "/TemperateForest.asset";
+
+    [MenuItem("WildReach/World/Setup Forest Palette")]
+    static void SetupForestPalette()
+    {
+        var p = BuildForestPalette();
+        Selection.activeObject = p;
+        Debug.Log("[Island] TemperateForest palette ready: ForestTree (common), BlossomTree (rare), " +
+                  "Embercap mushrooms (cluster near trees/logs, upright), MossLog. Assign it to your Forest zone, then Scatter.");
+    }
 
     [MenuItem("WildReach/World/Create Starter Forest Island")]
-    static void Create()
+    static void CreateStarter()
     {
-        System.IO.Directory.CreateDirectory(Dir);
-
-        // --- the reusable forest palette ---
-        var palette = LoadOrCreate<ScatterPalette>(Dir + "/TemperateForest.asset");
-        palette.entries.Clear();
-        Add(palette, "Assets/Environment/ForestTrees/ForestTree.prefab",                          40, 0.8f, 1.5f, 5.5f, false, 0f);
-        Add(palette, "Assets/Environment/ForestTrees/BlossomTree.prefab",                          8,  0.8f, 1.2f, 7f,   false, 0f);
-        Add(palette, "Assets/Environment/Mushrooms/EmbercapCluster/EmbercapCluster_Glow.prefab",   14, 0.7f, 1.3f, 3.5f, true,  0f);
-        Add(palette, "Assets/Environment/Mushrooms/EmbercapGrove/EmbercapGrove_Glow.prefab",       8,  0.7f, 1.2f, 4f,   true,  0f);
-        Add(palette, "Assets/Environment/MossLog/MossLog.fbx",                                     5,  0.9f, 1.2f, 6f,   true,  1.2f);
-        EditorUtility.SetDirty(palette);
-
-        // --- the island with a single Forest zone ---
+        var palette = BuildForestPalette();
         var island = LoadOrCreate<IslandDefinition>(Dir + "/Island1.asset");
         island.terrainName = "Island1_Terrain";
         island.seed = 12345;
@@ -32,25 +30,39 @@ public static class CreateStarterIsland
         island.zones.Add(new IslandZone
         {
             name = "Forest", color = new Color(0.30f, 0.75f, 0.35f),
-            palette = palette, grass = true, grassDensity = 0.7f,
-            slopeLimit = 32f, clearance = 13f,
+            palette = palette, grass = true, grassDensity = 0.7f, slopeLimit = 32f, clearance = 13f,
         });
         EditorUtility.SetDirty(island);
-
         AssetDatabase.SaveAssets();
         Selection.activeObject = island;
-        Debug.Log("[Island] Starter ready: Assets/World/Island1.asset + TemperateForest palette. " +
-                  "Open WildReach > World > Island Builder, Create the zone map, paint Forest, Build.");
+        Debug.Log("[Island] Starter Island1 + TemperateForest palette created.");
     }
 
-    static void Add(ScatterPalette p, string prefabPath, int count, float minS, float maxS, float spacing, bool groundSit, float normH)
+    static ScatterPalette BuildForestPalette()
+    {
+        System.IO.Directory.CreateDirectory(Dir);
+        var p = LoadOrCreate<ScatterPalette>(PalettePath);
+        p.entries.Clear();
+        //    prefab path                                                                     spacing density minS  maxS  groundSit normH nearProps
+        Add(p, "Assets/Environment/ForestTrees/ForestTree.prefab",                            7f,   0.55f, 0.8f, 1.5f, false, 0f,   false);
+        Add(p, "Assets/Environment/ForestTrees/BlossomTree.prefab",                          42f,   0.15f, 0.8f, 1.2f, false, 0f,   false);  // pink = rare
+        Add(p, "Assets/Environment/MossLog/MossLog.fbx",                                     24f,   0.30f, 0.9f, 1.2f, true,  1.2f, false);
+        Add(p, "Assets/Environment/Mushrooms/EmbercapCluster/EmbercapCluster_Glow.prefab",    0f,   0.25f, 0.7f, 1.3f, true,  0f,   true);   // at tree/log bases
+        Add(p, "Assets/Environment/Mushrooms/EmbercapGrove/EmbercapGrove_Glow.prefab",        0f,   0.14f, 0.7f, 1.2f, true,  0f,   true);
+        EditorUtility.SetDirty(p);
+        AssetDatabase.SaveAssets();
+        return p;
+    }
+
+    static void Add(ScatterPalette p, string prefabPath, float spacing, float density,
+                    float minS, float maxS, bool groundSit, float normH, bool nearProps)
     {
         var go = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-        if (go == null) { Debug.LogWarning("[Island] starter: missing " + prefabPath); return; }
+        if (go == null) { Debug.LogWarning("[Island] palette: missing " + prefabPath); return; }
         p.entries.Add(new ScatterEntry
         {
-            prefab = go, count = count, minScale = minS, maxScale = maxS,
-            spacing = spacing, slopeLimit = 35f, groundSit = groundSit, normalizeHeight = normH,
+            prefab = go, spacing = spacing, density = density, minScale = minS, maxScale = maxS,
+            slopeLimit = 35f, groundSit = groundSit, normalizeHeight = normH, nearProps = nearProps,
         });
     }
 
