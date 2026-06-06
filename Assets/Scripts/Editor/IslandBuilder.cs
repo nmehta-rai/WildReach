@@ -217,50 +217,106 @@ public static class IslandBuilder
     public static void PlaceMobs(IslandDefinition def, int zoneIndex)
     {
         var z = def.zones[zoneIndex];
-        if (z.mob == null) { Debug.LogWarning($"[Mobs] Zone '{z.name}' has no mob assigned."); return; }
+        if (z.mobs == null || z.mobs.All(e => e.prefab == null)) { Debug.LogWarning($"[Mobs] Zone '{z.name}' has no mobs assigned."); return; }
         var terrain = GetTerrain(def);
         if (terrain == null) { Debug.LogWarning("[Mobs] No terrain."); return; }
         var px = ReadZones(def, out int res);
         if (px == null) { Debug.LogWarning("[Mobs] No zone map painted yet."); return; }
 
-        bool isAsset = EditorUtility.IsPersistent(z.mob);   // a prefab asset vs an in-scene object
-        int n = Mathf.Max(1, z.mobCount);
-
-        if (!isAsset && n == 1) { BindMob(z.mob, def, z.name); Debug.Log($"[Mobs] Bound '{z.mob.name}' to roam '{z.name}'."); return; }
+        var tpos = terrain.transform.position; var size = terrain.terrainData.size;
+        // collect EVERY painted-in-zone texel as a world position, then place from those — reliable for any zone
+        // size (uniform random darts over the whole terrain almost never hit a tiny zone like a mountain plateau).
+        var cells = new List<Vector3>();
+        for (int yy = 0; yy < res; yy++)
+        for (int xx = 0; xx < res; xx++)
+            if (px[yy * res + xx].r - 1 == zoneIndex)
+                cells.Add(new Vector3(tpos.x + (xx / (float)(res - 1)) * size.x, 0f, tpos.z + (yy / (float)(res - 1)) * size.z));
+        if (cells.Count == 0) { Debug.LogWarning($"[Mobs] Zone '{z.name}' has no painted area — paint it before placing mobs."); return; }
 
         var root = GameObject.Find("Mobs_" + def.name) ?? new GameObject("Mobs_" + def.name);
-        var tpos = terrain.transform.position; var size = terrain.terrainData.size;
-        int placed = 0;
-        for (int k = 0; k < n; k++)
+        // clear THIS zone's previously-placed mobs first, so Place All replaces instead of stacking up
+        int cleared = 0;
+        for (int c = root.transform.childCount - 1; c >= 0; c--)
         {
-            Vector3 spot = Vector3.zero; bool found = false;
-            for (int tries = 0; tries < 64 && !found; tries++)
-            {
-                float wx = tpos.x + (float)Random.value * size.x, wz = tpos.z + (float)Random.value * size.z;
-                if (ZoneAt(px, res, terrain, wx, wz) != zoneIndex) continue;
-                spot = new Vector3(wx, terrain.SampleHeight(new Vector3(wx, 0, wz)) + tpos.y, wz); found = true;
-            }
-            if (!found) continue;
-            var inst = isAsset ? (GameObject)PrefabUtility.InstantiatePrefab(z.mob) : Object.Instantiate(z.mob);
-            inst.name = z.mob.name + "_" + z.name + (n > 1 ? "_" + (k + 1) : "");
-            inst.transform.SetParent(root.transform, true);
-            inst.transform.position = spot;
-            inst.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-            BindMob(inst, def, z.name);
-            placed++;
+            var child = root.transform.GetChild(c);
+            if (child.name.Contains("_" + z.name)) { Object.DestroyImmediate(child.gameObject); cleared++; }
         }
-        Debug.Log($"[Mobs] Placed {placed}/{n} of '{z.mob.name}' to roam '{z.name}'.");
+        int placed = 0;
+        foreach (var entry in z.mobs)
+        {
+            if (entry.prefab == null) continue;
+            int n = Mathf.Max(1, entry.count);
+            bool isAsset = EditorUtility.IsPersistent(entry.prefab);
+            for (int k = 0; k < n; k++)
+            {
+                var cflat = cells[Random.Range(0, cells.Count)];
+                Vector3 spot = new Vector3(cflat.x, terrain.SampleHeight(cflat) + tpos.y, cflat.z);
+                var inst = isAsset ? (GameObject)PrefabUtility.InstantiatePrefab(entry.prefab) : Object.Instantiate(entry.prefab);
+                inst.name = entry.prefab.name + "_" + z.name + (n > 1 ? "_" + (k + 1) : "");
+                inst.transform.SetParent(root.transform, true);
+                inst.transform.position = spot;
+                inst.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+                BindMob(inst, def, z.name);
+                placed++;
+            }
+        }
+        Debug.Log($"[Mobs] Placed {placed} creature(s) across '{z.name}' (cleared {cleared} old).");
+    }
+
+    // Despawn the current pet (the "Pet" object in the scene).
+    public static void RemovePet()
+    {
+        var p = GameObject.Find("Pet");
+        if (p != null) { Object.DestroyImmediate(p); Debug.Log("[Pet] Removed."); }
+        else Debug.Log("[Pet] No pet in the scene to remove.");
+    }
+
+    // Spawn a creature beside the player as a follow-pet (strips its wild AI, adds PetFollow). One pet at a time.
+    public static void SpawnPet(GameObject prefab)
+    {
+        if (prefab == null) return;
+        var old = GameObject.Find("Pet");
+        if (old != null) Object.DestroyImmediate(old);
+
+        var inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+        inst.name = "Pet";
+        var pm = Object.FindFirstObjectByType<PlayerMovement>();
+        if (pm != null) inst.transform.position = pm.transform.position + pm.transform.right * 1.5f - pm.transform.forward * 0.5f;
+
+        // read the creature's OWN pace before stripping its AI, so the pet follows at its natural speed
+        float petSpeed = 2.5f;
+        var zr = inst.GetComponent<ZoneRoamer>(); if (zr != null) petSpeed = zr.RoamSpeed;
+        var pr = inst.GetComponent<Predator>();   if (pr != null) petSpeed = pr.ChaseSpeed;
+
+        foreach (var c in new Component[] { zr, pr, inst.GetComponent<CreatureWander>() })
+            if (c != null) Object.DestroyImmediate(c);
+        foreach (var col in inst.GetComponentsInChildren<Collider>(true)) col.enabled = false;   // a pet must never shove the player
+        foreach (var rb in inst.GetComponentsInChildren<Rigidbody>(true)) Object.DestroyImmediate(rb);
+        var pf = inst.GetComponent<PetFollow>() ?? inst.AddComponent<PetFollow>();
+        pf.SetMaxSpeed(petSpeed);
+
+        Selection.activeGameObject = inst;
+        Debug.Log($"[Pet] '{prefab.name}' is now your pet. Press Play — walk/run/jump and it mirrors you. Tweak its clips, re-run its Setup, and Spawn as Pet again to re-check.");
     }
 
     static void BindMob(GameObject go, IslandDefinition def, string zoneName)
     {
         var pred = go.GetComponent<Predator>();
         if (pred != null) { pred.Configure(def, zoneName); EditorUtility.SetDirty(pred); return; }
+        var filler = go.GetComponent<FillerCritter>();   // cheap ambient critter — leave it cheap, just bind the zone
+        if (filler != null) { filler.Configure(def, zoneName, def.terrainName); EditorUtility.SetDirty(filler); return; }
         var cw = go.GetComponent<CreatureWander>();                 // old free-roam would fight the zone roamer
         if (cw != null) cw.enabled = false;
         var roamer = go.GetComponent<ZoneRoamer>() ?? Undo.AddComponent<ZoneRoamer>(go);
         roamer.Configure(def, zoneName, def.terrainName);
         EditorUtility.SetDirty(roamer);
+
+        // self-diagnose the common mistake: assigning the raw imported model (grey, no controller) instead of
+        // a configured creature. A textured + animated mob needs an Animator controller and built materials.
+        var anim = go.GetComponentInChildren<Animator>();
+        if (anim == null || anim.runtimeAnimatorController == null)
+            Debug.LogWarning($"[Mobs] '{go.name}' has no Animator controller — it will be static. Assign a CONFIGURED " +
+                             "creature to the zone's Mob slot (the textured, animated scene object or a saved prefab), NOT the raw imported FBX.");
     }
 
     static float NormalizeScale(ScatterEntry e)

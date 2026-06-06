@@ -96,9 +96,16 @@ public static class SetupCreature
         go.transform.position = spot;
         go.transform.rotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
 
-        var wander = go.GetComponent<CreatureWander>();
-        if (wander == null) wander = go.AddComponent<CreatureWander>();
-        wander.SetSeaLevel(sea);
+        var cw = go.GetComponent<CreatureWander>(); if (cw != null) Object.DestroyImmediate(cw);
+        var roamer = go.GetComponent<ZoneRoamer>() ?? go.AddComponent<ZoneRoamer>();
+        roamer.Configure(null, "Forrest", "Island1_Terrain", 0.35f);   // tortoise: very slow plod
+
+        // Save a CONFIGURED prefab (material + animator controller + avatar baked in). A zone's Mob slot lives on
+        // an IslandDefinition (a ScriptableObject), which CANNOT reference a scene object — so the slot needs a
+        // prefab asset. Assign this prefab in the Island Builder, not the scene Tortoise.
+        if (!AssetDatabase.IsValidFolder("Assets/Creatures")) AssetDatabase.CreateFolder("Assets", "Creatures");
+        PrefabUtility.SaveAsPrefabAsset(go, "Assets/Creatures/Tortoise.prefab");
+        Debug.Log("[Creature] Saved Assets/Creatures/Tortoise.prefab — pick it from the zone's Mob dropdown in the Island Builder.");
 
         Selection.activeGameObject = go;
         SceneView.FrameLastActiveSceneView();

@@ -18,12 +18,15 @@ public class ZoneRoamer : MonoBehaviour
     [SerializeField] float turnDegPerSec = 90f;
     [SerializeField] Vector2 pauseRange = new Vector2(1.5f, 4f);   // idle dwell between strolls
 
+    public float RoamSpeed => speed;   // a pet reads this to move at the creature's own pace
+
     Terrain terrain; Animator anim; readonly ZoneSampler zone = new ZoneSampler();
     Vector3 home, target; float resume; bool paused;
 
-    // Called by the Island Builder when it places this mob into a zone.
-    public void Configure(IslandDefinition def, string zoneName, string terrainName)
-    { island = def; this.zoneName = zoneName; this.terrainName = terrainName; }
+    // Called by the Island Builder when it places this mob into a zone. moveSpeed>0 overrides the per-creature
+    // pace (set in each creature's Setup); BindMob passes 0 to keep the prefab's baked speed.
+    public void Configure(IslandDefinition def, string zoneName, string terrainName, float moveSpeed = 0f)
+    { island = def; this.zoneName = zoneName; this.terrainName = terrainName; if (moveSpeed > 0f) speed = moveSpeed; }
 
     void Start()
     {

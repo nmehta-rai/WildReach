@@ -19,6 +19,7 @@ public class IslandBuilderWindow : EditorWindow
     bool  erase;
     bool  showOverlay = true;
     float brushRadius = 8f;
+    int   petIndex;           // creature dropdown selection for the Pet slot
 
     Color32[] cache;          // cached zone pixels for the overlay
     int       cacheRes;
@@ -126,7 +127,26 @@ public class IslandBuilderWindow : EditorWindow
 
     void ZonesSection()
     {
+        var creatures = CreatureRegistry.Prefabs();                 // our roster (Assets/Creatures)
+        var creatureNames = new string[creatures.Count + 1];
+        creatureNames[0] = "None";
+        for (int c = 0; c < creatures.Count; c++) creatureNames[c + 1] = creatures[c].name;
+
+        // Pet slot: spawn a creature that follows you and mirrors your moves — for previewing + fine-tuning
+        // a creature's animations without hunting one down in the wild.
+        Header("Pet (preview / fine-tune)");
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            petIndex = EditorGUILayout.Popup("Pet", Mathf.Clamp(petIndex, 0, creatures.Count), creatureNames);
+            if (GUILayout.Button(petIndex <= 0 ? "Remove Pet" : "Spawn as Pet", GUILayout.Width(120)))
+            {
+                if (petIndex <= 0) IslandBuilder.RemovePet();
+                else IslandBuilder.SpawnPet(creatures[petIndex - 1]);
+            }
+        }
+
         Header("Zones");
+
         for (int i = 0; i < def.zones.Count; i++)
         {
             var z = def.zones[i];
@@ -164,12 +184,26 @@ public class IslandBuilderWindow : EditorWindow
                 z.slopeLimit = EditorGUILayout.FloatField("Slope limit", z.slopeLimit);
                 z.clearance  = EditorGUILayout.FloatField("Hero clear", z.clearance);
             }
+            // Mobs: a LIST per zone — add as many creature types as you like, each with its own count.
+            // Every option is one of OUR creatures (Assets/Creatures), never the whole project's GameObjects.
+            EditorGUILayout.LabelField("Mobs", EditorStyles.miniBoldLabel);
+            for (int m = 0; m < z.mobs.Count; m++)
+            {
+                var e = z.mobs[m];
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    int cur = e.prefab == null ? 0 : creatures.IndexOf(e.prefab) + 1;
+                    int sel = EditorGUILayout.Popup(cur, creatureNames);
+                    e.prefab = sel <= 0 ? null : creatures[sel - 1];
+                    e.count = Mathf.Max(1, EditorGUILayout.IntField(e.count, GUILayout.Width(40)));
+                    if (GUILayout.Button("✕", GUILayout.Width(24))) { z.mobs.RemoveAt(m); EditorUtility.SetDirty(def); GUIUtility.ExitGUI(); }
+                }
+            }
             using (new EditorGUILayout.HorizontalScope())
             {
-                z.mob = (GameObject)EditorGUILayout.ObjectField("Mob", z.mob, typeof(GameObject), true);
-                z.mobCount = Mathf.Max(1, EditorGUILayout.IntField(z.mobCount, GUILayout.Width(40)));
-                using (new EditorGUI.DisabledScope(z.mob == null))
-                    if (GUILayout.Button("Place", GUILayout.Width(70))) IslandBuilder.PlaceMobs(def, i);
+                if (GUILayout.Button("+ Mob", GUILayout.Width(70))) { z.mobs.Add(new ZoneMob()); EditorUtility.SetDirty(def); }
+                using (new EditorGUI.DisabledScope(z.mobs.Count == 0))
+                    if (GUILayout.Button("Place All", GUILayout.Width(90))) IslandBuilder.PlaceMobs(def, i);
             }
             EditorGUILayout.EndVertical();
         }

@@ -16,8 +16,8 @@ public class Predator : MonoBehaviour
     [SerializeField] float leashRadius  = 45f;     // fallback bound only if the zone map can't be read
 
     [Header("Movement")]
-    [SerializeField] float prowlSpeed = 1.6f;
-    [SerializeField] float chaseSpeed = 5.5f;
+    [SerializeField] float prowlSpeed = 2f;
+    [SerializeField] float chaseSpeed = 7.5f;     // clearly faster than the player's run
     [SerializeField] float turnDegPerSec = 120f;   // capped turn rate — he arcs through turns instead of whipping
 
     [Header("Attack")]
@@ -37,6 +37,8 @@ public class Predator : MonoBehaviour
     Collider body;
     Vector3 home, prowlTarget, lungeDir; float stateEnter, nextProwl; bool hitDone;
     readonly ZoneSampler zone = new ZoneSampler();
+
+    public float ChaseSpeed => chaseSpeed;   // a pet reads this to move at the leopard's own pace
 
     void Enter(State s) { state = s; stateEnter = Time.time; }
 

@@ -14,6 +14,18 @@ public static class SetupLeopardPredator
     const string CtrlPath = "Assets/Characters/Leopard/Leopard.controller";
     const float  TargetHeight = 1.3f;
 
+    // Consolidate the scene leopard into Assets/Creatures so it shows up in the zone Mob dropdown like the
+    // tortoise. Saves the whole 'Predator' (AI + animated leopard) as a reusable prefab.
+    [MenuItem("WildReach/Creatures/Save Leopard as Creature")]
+    static void SaveLeopardCreature()
+    {
+        var pred = GameObject.Find("Predator");
+        if (pred == null) { Debug.LogError("[Leopard] No 'Predator' in the scene to save."); return; }
+        if (!AssetDatabase.IsValidFolder("Assets/Creatures")) AssetDatabase.CreateFolder("Assets", "Creatures");
+        PrefabUtility.SaveAsPrefabAsset(pred, "Assets/Creatures/Leopard.prefab");
+        Debug.Log("[Leopard] Saved Assets/Creatures/Leopard.prefab — pick it from a zone's Mob dropdown.");
+    }
+
     // Animate the leopard that's ALREADY in the scene without re-instantiating or re-scaling him
     // (the full Setup re-runs auto-scale, which clobbered the manual size). Use this after re-baking clips.
     [MenuItem("WildReach/Combat/Wire Leopard Animation")]

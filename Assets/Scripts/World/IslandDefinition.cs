@@ -50,9 +50,15 @@ public class IslandZone
     public float slopeLimit = 32f;   // no scatter on ground steeper than this (deg)
     public float clearance  = 0f;    // keep this far from 'HomeTree' (0 = ignore)
 
-    [Header("Mob (roams this whole zone)")]
-    [Tooltip("Creature placed into this zone — a prefab, or an existing scene object. It gets bound to roam this zone freely.")]
-    public GameObject mob;
-    [Tooltip("How many of the mob to place across the zone.")]
-    public int mobCount = 1;
+    [Header("Mobs (each roams this whole zone)")]
+    public List<ZoneMob> mobs = new List<ZoneMob>();
+}
+
+[Serializable]
+public class ZoneMob
+{
+    [Tooltip("A creature prefab from Assets/Creatures.")]
+    public GameObject prefab;
+    [Tooltip("How many of this creature to scatter across the zone.")]
+    public int count = 1;
 }

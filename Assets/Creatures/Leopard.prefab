@@ -1,0 +1,165 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &6374115345552440972
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8415309385024534639}
+  - component: {fileID: 6494930742916994127}
+  - component: {fileID: 7014958704629520642}
+  m_Layer: 0
+  m_Name: Leopard
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8415309385024534639
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6374115345552440972}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 6.6, y: 270, z: 297.8}
+  m_LocalScale: {x: 4.67, y: 4.67, z: 7.783333}
+  m_ConstrainProportionsScale: 1
+  m_Children:
+  - {fileID: 5898625984821706647}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &6494930742916994127
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6374115345552440972}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.3
+  m_Height: 1
+  m_Direction: 2
+  m_Center: {x: 0.00031789142, y: 0.16195296, z: -0.000289917}
+--- !u!114 &7014958704629520642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6374115345552440972}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 96e36abba9ed44473a45bf99bbe6f2e8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Predator
+  island: {fileID: 11400000, guid: c5c1027d276654973816c32ac23554e1, type: 2}
+  roamZone: peak plateau
+  roamRadius: 60
+  detectRadius: 22
+  leashRadius: 45
+  prowlSpeed: 1.6
+  chaseSpeed: 5.5
+  turnDegPerSec: 120
+  attackDamage: 1
+  pounceRange: 3.5
+  windUpTime: 0.35
+  strikeDelay: 0.18
+  pounceSpeed: 7
+  pounceTime: 0.45
+  recoverTime: 0.7
+  contactPad: 0.2
+--- !u!1001 &6221327515329419388
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 8415309385024534639}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.24915618
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.24915618
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.24915618
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_Name
+      value: Leopard
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 1da907e6688ae4d3496dcaac839f0141, type: 2}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+--- !u!4 &5898625984821706647 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: a4c1a57ed15044365b619dfdf9fb2d16, type: 3}
+  m_PrefabInstance: {fileID: 6221327515329419388}
+  m_PrefabAsset: {fileID: 0}
