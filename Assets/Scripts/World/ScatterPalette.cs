@@ -26,6 +26,8 @@ public class ScatterEntry
 
     [Header("Placement")]
     public bool  groundSit = false;        // drop so the mesh bottom rests on soil (props), else base at ground
+    public float sinkDepth = 0f;           // >0: push the base this many metres INTO the ground (roots embed; hides float on bumps)
+    public float footprint = 0f;           // >0: sample terrain over this radius (m) and sit on the LOWEST point (no float on slopes)
     public float normalizeHeight = 0f;     // >0: scale to this height in metres (raw fbx like the moss log)
     [Tooltip("Cluster near already-placed open-ground props (e.g. mushrooms at tree bases), not open ground.")]
     public bool  nearProps = false;

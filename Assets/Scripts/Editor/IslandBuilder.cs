@@ -102,8 +102,12 @@ public static class IslandBuilder
                     if (Random.value > e.density) continue;
 
                     float instS = (normScale > 0f ? normScale : 1f) * Random.Range(e.minScale, e.maxScale);
-                    float gy = terrain.SampleHeight(new Vector3(x, 0, zc)) + tpos.y;
-                    float y = e.groundSit ? gy - cm.bounds.min.y * instS : gy - 0.1f;
+                    // sit on the LOWEST terrain across the base footprint so a wide prop never floats on the high side
+                    // of a bump/slope; then sink the base a touch so roots embed instead of resting exactly on top.
+                    float gy = e.footprint > 0.01f
+                        ? LowestGround(terrain, tpos, x, zc, e.footprint)
+                        : terrain.SampleHeight(new Vector3(x, 0, zc)) + tpos.y;
+                    float y = e.groundSit ? gy - cm.bounds.min.y * instS - e.sinkDepth : gy - 0.1f;
                     var wp = new Vector3(x, y, zc);
                     mats.Add(Matrix4x4.TRS(wp, Quaternion.AngleAxis(Random.value * 360f, Vector3.up), Vector3.one * instS));
                     posL.Add(wp); sclL.Add(instS);
@@ -202,6 +206,20 @@ public static class IslandBuilder
         return final;
     }
 
+    // Lowest terrain height across a small ring around (x,z) — so a wide-footed prop sits on the low point under
+    // its base and doesn't float on the high side of a bump or slope. Returns world Y (terrain + base offset).
+    static float LowestGround(Terrain terrain, Vector3 tpos, float x, float z, float radius)
+    {
+        float lo = terrain.SampleHeight(new Vector3(x, 0, z));
+        for (int i = 0; i < 8; i++)
+        {
+            float a = i * Mathf.PI * 0.25f;
+            float h = terrain.SampleHeight(new Vector3(x + Mathf.Cos(a) * radius, 0, z + Mathf.Sin(a) * radius));
+            if (h < lo) lo = h;
+        }
+        return lo + tpos.y;
+    }
+
     // Removes scattered props (current + legacy containers) without rebuilding.
     public static void ClearScatter(IslandDefinition def)
     {
@@ -274,6 +292,32 @@ public static class IslandBuilder
             placed++;
         }
         Debug.Log($"[Mobs] Placed {placed} creature(s) across '{z.name}' (cleared {cleared} old), mixed: {string.Join(", ", tally.Select(kv => $"{kv.Value}×{kv.Key}"))}.");
+    }
+
+    // Create/remove one zone-bound firefly emitter per zone, driven by each zone's `fireflies` on/off toggle.
+    // The emitter only glows when the camera is inside that zone at night, so several zones can each have their own.
+    public static void ApplyFireflies(IslandDefinition def)
+    {
+        var root = GameObject.Find("Fireflies_" + def.name) ?? new GameObject("Fireflies_" + def.name);
+        int on = 0;
+        foreach (var z in def.zones)
+        {
+            var existing = root.transform.Find(z.name);
+            if (z.fireflies)
+            {
+                var go = existing != null ? existing.gameObject : new GameObject(z.name);
+                go.transform.SetParent(root.transform, false);
+                var ff = go.GetComponent<Fireflies>() ?? go.AddComponent<Fireflies>();
+                ff.Configure(def, z.name, def.terrainName);
+                on++;
+            }
+            else if (existing != null) Object.DestroyImmediate(existing.gameObject);
+        }
+        // also clear out any legacy single "Fireflies" emitters from the old (pre-zone) tool
+        foreach (var stray in Object.FindObjectsByType<Fireflies>(FindObjectsSortMode.None))
+            if (stray.transform.parent == null && stray.gameObject.name == "Fireflies") Object.DestroyImmediate(stray.gameObject);
+        if (root.transform.childCount == 0) Object.DestroyImmediate(root);
+        Debug.Log($"[Fireflies] {on} zone(s) now have fireflies (glow at night when you're inside them).");
     }
 
     // Despawn the current pet (the "Pet" object in the scene).

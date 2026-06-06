@@ -181,6 +181,12 @@ public class IslandBuilderWindow : EditorWindow
             }
             using (new EditorGUILayout.HorizontalScope())
             {
+                z.fireflies = EditorGUILayout.ToggleLeft("Fireflies (night)", z.fireflies, GUILayout.Width(120));
+                using (new EditorGUI.DisabledScope(z.palette == null && z.mobs.Count == 0))
+                    if (GUILayout.Button("Apply Fireflies", GUILayout.Width(110))) IslandBuilder.ApplyFireflies(def);
+            }
+            using (new EditorGUILayout.HorizontalScope())
+            {
                 z.slopeLimit = EditorGUILayout.FloatField("Slope limit", z.slopeLimit);
                 z.clearance  = EditorGUILayout.FloatField("Hero clear", z.clearance);
             }

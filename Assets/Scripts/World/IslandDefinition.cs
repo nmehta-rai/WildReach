@@ -46,6 +46,9 @@ public class IslandZone
     public bool grass = true;
     [Range(0f, 1f)] public float grassDensity = 0.7f;
 
+    [Tooltip("Glowing fireflies drift through this zone at night (on/off).")]
+    public bool fireflies = false;
+
     [Header("Rules")]
     public float slopeLimit = 32f;   // no scatter on ground steeper than this (deg)
     public float clearance  = 0f;    // keep this far from 'HomeTree' (0 = ignore)

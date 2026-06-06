@@ -9,8 +9,8 @@ using UnityEngine;
 public class DayNightCycle : MonoBehaviour
 {
     [SerializeField] Light sun;
-    [Tooltip("Seconds for one full day-night cycle (Play mode).")]
-    [SerializeField] float dayLengthSeconds = 120f;
+    [Tooltip("Seconds for one full day-night cycle (Play mode). 120 was way too fast; ~600-900 feels right.")]
+    [SerializeField] float dayLengthSeconds = 720f;
     [Range(0f, 1f)] [Tooltip("0/1 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset.")]
     [SerializeField] float timeOfDay = 0.35f;
     [SerializeField] bool autoCycle = true;
@@ -27,6 +27,9 @@ public class DayNightCycle : MonoBehaviour
     [SerializeField] float nightIntensity = 0.05f;
     [SerializeField] Color nightAmbient   = new Color(0.11f, 0.13f, 0.21f);   // moonlit navy, not black
     [SerializeField] Color nightFog       = new Color(0.07f, 0.09f, 0.16f);
+
+    [Header("Sky bodies (2D billboards)")]
+    [SerializeField] Transform sunDisc;          // the visible glowing sun in the sky (shown in day)
 
     [Header("Moon")]
     [SerializeField] Light moon;                 // cool directional fill, fades in at night
@@ -81,20 +84,22 @@ public class DayNightCycle : MonoBehaviour
         RenderSettings.ambientLight = Color.Lerp(nightAmbient, dayAmbient, day);
         RenderSettings.fogColor     = Color.Lerp(nightFog, dayFog, day);
 
-        // Moon: cool directional fill from a fixed high angle, fading in as the sun sets.
+        // Sun disc: visible while the sun is up (the SkyBillboard parks it at the sun's direction, facing camera).
+        if (sunDisc != null) sunDisc.gameObject.SetActive(day > 0.02f);
+
+        // Moon ORBITS OPPOSITE the sun (half a cycle out of phase) on the same azimuth track, so as the sun sets on
+        // one horizon the moon rises on the other — they cross the sky in turn instead of the moon popping in fixed.
+        float moonUp = 0f;
         if (moon != null)
         {
-            moon.transform.rotation = Quaternion.Euler(55f, 150f, 0f);
+            moon.transform.rotation = Quaternion.Euler((timeOfDay + 0.5f) * 360f - 90f, sunAzimuth, 0f);
+            moonUp = -moon.transform.forward.y;                       // >0 once the moon is above the horizon
             moon.color = moonColor;
-            moon.intensity = moonIntensity * night;
+            moon.intensity = moonIntensity * night;                   // cool fill only while the sun is gone
             moon.enabled = night > 0.02f;
         }
-        // Park the visible moon disc in the sky where its light comes from; show it at night.
-        if (moonDisc != null)
-        {
-            moonDisc.gameObject.SetActive(night > 0.05f);
-            if (moon != null) moonDisc.position = -moon.transform.forward * 450f;
-        }
+        // Visible moon disc: show whenever the moon is above the horizon (SkyBillboard parks + faces it each frame).
+        if (moonDisc != null) moonDisc.gameObject.SetActive(moonUp > 0.02f);
     }
 
     // Used by the WildReach/Time menu for editor dressing.

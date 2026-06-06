@@ -237,6 +237,8 @@ public static class SetupAncientTree
         e.maxScale        = 1.25f;
         e.slopeLimit      = 30f;
         e.groundSit       = true;
+        e.footprint       = 2.5f;    // sit on the lowest ground across a 2.5m base radius (no floating on bumps/slopes)
+        e.sinkDepth       = 1.2f;    // bury the base ~1.2m so the roots go into the ground
         e.normalizeHeight = TreeHeight;   // every tree normalised to this height regardless of the FBX import scale
         e.nearProps       = false;
         EditorUtility.SetDirty(palette);

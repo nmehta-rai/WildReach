@@ -21,6 +21,7 @@ MonoBehaviour:
     palette: {fileID: 0}
     grass: 0
     grassDensity: 0.7
+    fireflies: 0
     slopeLimit: 32
     clearance: 0
     mobs: []
@@ -30,6 +31,7 @@ MonoBehaviour:
     palette: {fileID: 0}
     grass: 1
     grassDensity: 0.1391
+    fireflies: 0
     slopeLimit: 32
     clearance: 0
     mobs: []
@@ -39,6 +41,7 @@ MonoBehaviour:
     palette: {fileID: 11400000, guid: 6a25f13bf67d440ea83c5bc60978b42d, type: 2}
     grass: 1
     grassDensity: 0.9848
+    fireflies: 1
     slopeLimit: 32
     clearance: 0
     mobs:
@@ -62,6 +65,7 @@ MonoBehaviour:
     palette: {fileID: 0}
     grass: 0
     grassDensity: 0.7
+    fireflies: 0
     slopeLimit: 32
     clearance: 0
     mobs: []
@@ -71,6 +75,7 @@ MonoBehaviour:
     palette: {fileID: 0}
     grass: 0
     grassDensity: 0.7
+    fireflies: 0
     slopeLimit: 32
     clearance: 0
     mobs: []
@@ -80,6 +85,7 @@ MonoBehaviour:
     palette: {fileID: 0}
     grass: 1
     grassDensity: 0.7
+    fireflies: 0
     slopeLimit: 32
     clearance: 0
     mobs:

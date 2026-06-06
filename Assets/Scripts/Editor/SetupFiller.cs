@@ -87,18 +87,6 @@ public static class SetupFiller
         Debug.Log($"[Filler] Saved Assets/Creatures/{name}.prefab — pick it from a zone's Mob dropdown and Place a few hundred. Cheap (no skeleton).");
     }
 
-    [MenuItem("WildReach/World/Add Fireflies")]
-    static void AddFireflies()
-    {
-        var go = new GameObject("Fireflies");
-        go.AddComponent<Fireflies>();
-        // sit them where you'll actually be standing: prefer the player, then a landmark, then origin
-        var player = Object.FindFirstObjectByType<PlayerMovement>();
-        var t = player != null ? player.transform : (GameObject.Find("HomeTree")?.transform);
-        go.transform.position = (t != null ? t.position : Vector3.zero) + Vector3.up * 1.5f;
-        Selection.activeGameObject = go;
-        SceneView.FrameLastActiveSceneView();
-        Debug.Log("[Fireflies] Added at the player/forest. 'Always On Preview' is ON so you see them now (bloom = the glow); " +
-                  "uncheck it on the component for real night-only behaviour. Tune radius/count/brightness there too.");
-    }
+    // Fireflies are now PER-ZONE: tick "Fireflies (night)" on a zone in the Island Builder and hit Apply Fireflies.
+    // (The old single-emitter menu is gone — it spawned a loose pile at one spot, which is what we were fixing.)
 }
