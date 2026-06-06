@@ -14,6 +14,8 @@ public class Fireflies : MonoBehaviour
     [SerializeField] float brightness = 5f;     // HDR multiplier so bloom catches them
     [SerializeField] float driftSpeed = 0.35f;
     [SerializeField] bool  nightOnly = true;
+    [SerializeField] bool  alwaysOnPreview = true; // TESTING: glow regardless of time so you can see them now.
+                                                   //   Uncheck for the real night-only behaviour.
     [SerializeField] float dayIntensity = 0.7f;  // sun above this = full day (motes hidden)
     [SerializeField] float nightIntensity = 0.12f;// sun below this = full night (motes glowing)
 
@@ -40,7 +42,8 @@ public class Fireflies : MonoBehaviour
 
     void Update()
     {
-        float night = nightOnly ? Mathf.InverseLerp(dayIntensity, nightIntensity, sun != null ? sun.intensity : 0f) : 1f;
+        float night = (!nightOnly || alwaysOnPreview) ? 1f
+                    : Mathf.InverseLerp(dayIntensity, nightIntensity, sun != null ? sun.intensity : 0f);
         float t = Time.time;
         for (int i = 0; i < motes.Length; i++)
         {

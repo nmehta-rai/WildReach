@@ -241,26 +241,39 @@ public static class IslandBuilder
             var child = root.transform.GetChild(c);
             if (child.name.Contains("_" + z.name)) { Object.DestroyImmediate(child.gameObject); cleared++; }
         }
-        int placed = 0;
+        // half a texel, in world units — used to jitter each spawn off the texel grid so creatures don't snap
+        // into visible rows/clusters (the "they spawn in their own sections" look at coarse zone-map resolution).
+        float halfCellX = 0.5f * size.x / (res - 1);
+        float halfCellZ = 0.5f * size.z / (res - 1);
+
+        // Expand every (entry, count) into a flat placement list, then SHUFFLE it so the types interleave both
+        // in the hierarchy and in placement order — beetles, frogs and hoppers end up mixed across the zone
+        // instead of laid down one species-block at a time.
+        var queue = new List<ZoneMob>();
         foreach (var entry in z.mobs)
+            if (entry.prefab != null) for (int k = 0; k < Mathf.Max(1, entry.count); k++) queue.Add(entry);
+        for (int i = queue.Count - 1; i > 0; i--) { int j = Random.Range(0, i + 1); (queue[i], queue[j]) = (queue[j], queue[i]); }
+
+        var tally = new Dictionary<string, int>();
+        int placed = 0;
+        foreach (var entry in queue)
         {
-            if (entry.prefab == null) continue;
-            int n = Mathf.Max(1, entry.count);
             bool isAsset = EditorUtility.IsPersistent(entry.prefab);
-            for (int k = 0; k < n; k++)
-            {
-                var cflat = cells[Random.Range(0, cells.Count)];
-                Vector3 spot = new Vector3(cflat.x, terrain.SampleHeight(cflat) + tpos.y, cflat.z);
-                var inst = isAsset ? (GameObject)PrefabUtility.InstantiatePrefab(entry.prefab) : Object.Instantiate(entry.prefab);
-                inst.name = entry.prefab.name + "_" + z.name + (n > 1 ? "_" + (k + 1) : "");
-                inst.transform.SetParent(root.transform, true);
-                inst.transform.position = spot;
-                inst.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-                BindMob(inst, def, z.name);
-                placed++;
-            }
+            var cflat = cells[Random.Range(0, cells.Count)];
+            float jx = cflat.x + Random.Range(-halfCellX, halfCellX);
+            float jz = cflat.z + Random.Range(-halfCellZ, halfCellZ);
+            var cj = new Vector3(jx, 0f, jz);
+            Vector3 spot = new Vector3(jx, terrain.SampleHeight(cj) + tpos.y, jz);
+            tally.TryGetValue(entry.prefab.name, out int idx); tally[entry.prefab.name] = idx + 1;
+            var inst = isAsset ? (GameObject)PrefabUtility.InstantiatePrefab(entry.prefab) : Object.Instantiate(entry.prefab);
+            inst.name = entry.prefab.name + "_" + z.name + "_" + (idx + 1);
+            inst.transform.SetParent(root.transform, true);
+            inst.transform.position = spot;
+            inst.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+            BindMob(inst, def, z.name);
+            placed++;
         }
-        Debug.Log($"[Mobs] Placed {placed} creature(s) across '{z.name}' (cleared {cleared} old).");
+        Debug.Log($"[Mobs] Placed {placed} creature(s) across '{z.name}' (cleared {cleared} old), mixed: {string.Join(", ", tally.Select(kv => $"{kv.Value}×{kv.Key}"))}.");
     }
 
     // Despawn the current pet (the "Pet" object in the scene).

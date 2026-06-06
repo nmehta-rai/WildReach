@@ -45,8 +45,13 @@ public static class SetupFiller
             .Select(p => p.Replace('\\', '/'))
             .FirstOrDefault(p => { var n = p.ToLower(); return !n.Contains("normal") && !n.Contains("metallic") && !n.Contains("roughness") && !n.Contains("emit"); });
 
+        // Build the material in a CLEAN folder, NOT inside the FBX's "..._texture_fbx" subfolder — materials placed
+        // there orphan into ghost assets when that folder re-imports (load null at runtime = magenta critters).
+        if (!AssetDatabase.IsValidFolder("Assets/Creatures")) AssetDatabase.CreateFolder("Assets", "Creatures");
+        if (!AssetDatabase.IsValidFolder("Assets/Creatures/Materials")) AssetDatabase.CreateFolder("Assets/Creatures", "Materials");
         var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        var matPath = $"{dir}/{name}_Filler.mat";
+        var matPath = $"Assets/Creatures/Materials/{name}_Filler.mat";
+        AssetDatabase.DeleteAsset(matPath);
         AssetDatabase.CreateAsset(mat, matPath);
         if (baseTex != null)
         {
@@ -55,10 +60,17 @@ public static class SetupFiller
         }
         mat.SetFloat("_Smoothness", 0.2f);
         EditorUtility.SetDirty(mat);
+        AssetDatabase.ImportAsset(matPath, ImportAssetOptions.ForceUpdate);
+        mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);   // use the imported asset, not the in-memory ref
 
         var model = AssetDatabase.LoadAssetAtPath<GameObject>(fbxPath);
         var go = (GameObject)PrefabUtility.InstantiatePrefab(model);
         go.name = name;
+        // FLATTEN the variant link: a prefab *variant* records the material only as an override keyed to the
+        // FBX's internal renderer fileID — when the FBX reimports, that id can shift and the override orphans,
+        // so the renderer falls back to the FBX's embedded (Standard-shader) material = MAGENTA in URP. Unpacking
+        // bakes our material directly onto the MeshRenderer, with no dependency on FBX-internal ids.
+        PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
         foreach (var r in go.GetComponentsInChildren<Renderer>())
         {
             var mats = new Material[r.sharedMaterials.Length];
@@ -80,10 +92,13 @@ public static class SetupFiller
     {
         var go = new GameObject("Fireflies");
         go.AddComponent<Fireflies>();
-        var t = GameObject.Find("HomeTree");                       // sit them over the forest if we can find a landmark
-        go.transform.position = t != null ? t.transform.position : Vector3.zero;
+        // sit them where you'll actually be standing: prefer the player, then a landmark, then origin
+        var player = Object.FindFirstObjectByType<PlayerMovement>();
+        var t = player != null ? player.transform : (GameObject.Find("HomeTree")?.transform);
+        go.transform.position = (t != null ? t.position : Vector3.zero) + Vector3.up * 1.5f;
         Selection.activeGameObject = go;
         SceneView.FrameLastActiveSceneView();
-        Debug.Log("[Fireflies] Added — position it over the forest. They fade in at night (tune radius/count/glow on the component).");
+        Debug.Log("[Fireflies] Added at the player/forest. 'Always On Preview' is ON so you see them now (bloom = the glow); " +
+                  "uncheck it on the component for real night-only behaviour. Tune radius/count/brightness there too.");
     }
 }

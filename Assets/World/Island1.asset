@@ -43,19 +43,19 @@ MonoBehaviour:
     clearance: 0
     mobs:
     - prefab: {fileID: 8427603159412118995, guid: 37f11414101224daaafb4f713081804b, type: 3}
-      count: 10
+      count: 5
     - prefab: {fileID: 7071884516518688140, guid: 08fdc0fc906134ddf9344f09be038f3b, type: 3}
-      count: 90
+      count: 30
     - prefab: {fileID: 605317525815049209, guid: 8ccd32bb837284100a72a888dfdb8b95, type: 3}
-      count: 135
+      count: 235
     - prefab: {fileID: 4549241237384384469, guid: c73b10f90e2d44411bd9cc4b5ca74272, type: 3}
-      count: 160
+      count: 260
     - prefab: {fileID: 3235132799966479677, guid: 243693e34127548cebc381de59b9e410, type: 3}
-      count: 170
+      count: 270
     - prefab: {fileID: 4176981516542981642, guid: 1d1300c9f0fd94fa3a79a93d31b64dd1, type: 3}
-      count: 200
+      count: 240
     - prefab: {fileID: 5848035056181791504, guid: b9be58bedcf1c4e18b4b98111bbd61ef, type: 3}
-      count: 110
+      count: 210
   - name: Road
     color: {r: 1, g: 0.627451, b: 0.4784314, a: 1}
     showOverlay: 1
