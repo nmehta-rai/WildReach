@@ -1,21 +1,26 @@
 using UnityEngine;
 
-// A companion that trails the player and MIRRORS the player's locomotion onto its own Animator: stand still
-// and it idles, walk and it walks, run and it runs, jump and it hops. Built mainly to preview + fine-tune a
-// creature's animations without hunting one down in the wild — assign any creature prefab as the pet.
-// Drives Animator "Speed" (float) + "Airborne" (bool) + "Jump" (trigger) if the controller has them.
+// Preview companion for tuning animations. It MIRRORS THE PLAYER'S STATE onto its own Animator — idle when you
+// idle, walk when you walk, run when you run, jump when you jump — but it MOVES at the CREATURE'S OWN gait pace
+// (not yours), so you can read the true pacing of each clip without foot-skating or catch-up jitter. When you idle
+// it ambles back to your side and settles. (Later, wild creatures do their own thing; this is the test harness.)
 [DisallowMultipleComponent]
 public class PetFollow : MonoBehaviour
 {
-    [SerializeField] float followSmooth   = 0.18f;  // SmoothDamp time — smaller = snappier, larger = floatier
-    [SerializeField] float maxSpeed       = 3f;     // the creature's OWN top pace (set at spawn); it can't exceed this
-    [SerializeField] float turnDegPerSec  = 240f;
-    [SerializeField] float hopHeight      = 1.2f;   // physical hop when the player jumps (clip has no root motion)
+    [SerializeField] float walkPace      = 1.0f;   // the creature's own walking speed (set at spawn) — match the
+                                                   // walk clip's stride so the feet lock instead of skating
+    [SerializeField] float runMultiplier = 2.5f;   // run pace = walkPace * this (match the run clip's stride)
+    [SerializeField] float turnDegPerSec = 260f;
+    [SerializeField] float hopHeight     = 1.2f;   // physical hop when you jump (until a jump clip exists)
+    [SerializeField] float sideOffset    = 2.0f;   // how far to your side it trails
+    [SerializeField] float backOffset    = 0.5f;
+    [SerializeField] float leashKeep     = 2f;     // within this it moves at its true gait pace (feet lock)
+    [SerializeField] float leashGain     = 8f;     // beyond it, speed up to catch back into view
 
-    public void SetMaxSpeed(float s) { if (s > 0.01f) maxSpeed = s; }
+    public void SetMaxSpeed(float s) { if (s > 0.01f) walkPace = s; }
 
     Transform player; PlayerMovement move; Animator anim; Terrain terrain;
-    float groundY, hopVel, hopY;                    // hopY = current extra height above the ground
+    float hopVel, hopY;
 
     void Start()
     {
@@ -23,60 +28,76 @@ public class PetFollow : MonoBehaviour
         if (pm != null) { player = pm.transform; move = pm; move.Jumped += OnPlayerJump; }
         anim = GetComponentInChildren<Animator>(true);
         terrain = Terrain.activeTerrain ?? Object.FindFirstObjectByType<Terrain>();
-        if (anim != null) anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;   // never freeze when off the SMR bounds
-
-        // EVIDENCE: this one line says why a creature does or doesn't animate.
-        string ctrl = anim != null && anim.runtimeAnimatorController != null ? anim.runtimeAnimatorController.name : "NULL";
-        string av   = anim == null ? "no-animator" : anim.avatar == null ? "NULL" : (anim.avatar.isValid ? anim.avatar.name : "INVALID");
-        string prm  = anim != null ? string.Join(",", System.Array.ConvertAll(anim.parameters, p => p.name)) : "-";
-        Debug.Log($"[Pet] '{name}': animator={(anim != null)} controller={ctrl} avatar={av} player={(move != null)} params=[{prm}]");
-        if (anim != null && anim.avatar == null)
-            Debug.LogWarning("[Pet] Animator has NO AVATAR — Generic clips silently won't play. The creature's FBX needs Rig=Generic + Avatar=Create From This Model, and the prefab must keep that avatar.");
+        if (anim != null) anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
     }
 
     void OnDestroy() { if (move != null) move.Jumped -= OnPlayerJump; }
 
     void OnPlayerJump()
     {
-        if (HasAnim && HasParam("Jump")) anim.SetTrigger("Jump");   // creatures without a jump clip just hop
-        hopVel = Mathf.Sqrt(2f * 9.81f * hopHeight);                // launch the physical hop
+        if (HasAnim && HasParam("Jump")) anim.SetTrigger("Jump");   // plays the jump clip once we have one
+        hopVel = Mathf.Sqrt(2f * 9.81f * hopHeight);                // physical hop in the meantime
     }
 
     void Update()
     {
-        if (player == null) return;
+        if (player == null || move == null) return;
 
-        // Trail a spot just beside-and-behind the player and ease toward it with SmoothDamp — no catch-up
-        // bursts, so the body glides smoothly while the legs animate (the old proportional sprint jerked).
-        Vector3 spot = player.position + player.right * 1.6f - player.forward * 0.3f;
+        // --- decide STATE from the player, and PACE from the creature ---
+        float ps = move.PlanarSpeed;                       // player's intended speed: 0 / walk / run
+        bool playerMoving  = ps > 0.5f;
+        bool playerRunning = ps >= move.RunSpeed - 0.5f;
+        float runPace = walkPace * runMultiplier;
+
+        Vector3 spot = player.position + player.right * sideOffset - player.forward * backOffset;
         Vector3 cur  = transform.position;
-        Vector3 flatTarget = new Vector3(spot.x, cur.y, spot.z);
-        Vector3 newPos = Vector3.SmoothDamp(cur, flatTarget, ref followVel, followSmooth, maxSpeed);   // capped to ITS pace
+        Vector3 toSpot = new Vector3(spot.x - cur.x, 0f, spot.z - cur.z);
+        float dist = toSpot.magnitude;
 
-        Vector3 moveDelta = Flat(newPos - cur);
-        float actualSpeed = moveDelta.magnitude / Mathf.Max(Time.deltaTime, 0.0001f);   // its own ground speed this frame
-        FaceDir(moveDelta.sqrMagnitude > 0.0004f ? moveDelta.normalized : Flat(player.forward));
+        float pace, animSpeed;
+        if (playerMoving)                                  // mirror the player's gait + travel at the creature's pace
+        {
+            pace = playerRunning ? runPace : walkPace;
+            animSpeed = ps;                                // 0/walk/run → pet's controller picks the matching state
+        }
+        else if (dist > 1.5f)                              // player idle but we're behind → amble back at walk
+        {
+            pace = walkPace; animSpeed = move.WalkSpeed;
+        }
+        else { pace = 0f; animSpeed = 0f; }                // settled beside you → idle
 
-        // ground clamp + the physical hop arc on top
-        groundY = terrain != null ? terrain.SampleHeight(newPos) + terrain.transform.position.y : cur.y - hopY;
+        // LEASH: you move much faster than these creatures, so without this the pet vanishes behind you and you
+        // never see the run. If it falls behind, speed it up to catch back into view (a little foot-slide during
+        // the catch-up is the trade for being able to watch the gait at all).
+        if (pace > 0.01f && dist > leashKeep)
+            pace = Mathf.Max(pace, pace + (dist - leashKeep) * leashGain);
+
+        // --- move at exactly `pace` while travelling (constant speed = the gait reads true) ---
+        Vector3 newPos = cur;
+        if (pace > 0.01f && dist > 0.05f)
+        {
+            Vector3 step = toSpot.normalized * Mathf.Min(pace * Time.deltaTime, dist);
+            newPos += step;
+            FaceDir(step);
+        }
+        else FaceDir(Flat(player.forward));                // face the way you face when settled
+
+        // ground clamp + the physical hop arc
+        float groundY = terrain != null ? terrain.SampleHeight(newPos) + terrain.transform.position.y : cur.y;
         if (hopVel != 0f || hopY > 0f)
         {
-            hopY += hopVel * Time.deltaTime;
-            hopVel -= 9.81f * Time.deltaTime;
+            hopY += hopVel * Time.deltaTime; hopVel -= 9.81f * Time.deltaTime;
             if (hopY <= 0f) { hopY = 0f; hopVel = 0f; }
         }
         newPos.y = groundY + hopY;
         transform.position = newPos;
 
-        // animate from ITS OWN pace, normalised to its max so the existing walk/run thresholds fire:
-        // ambling along = walk, moving near its top speed (catching up) = run, stopped = idle.
         if (HasAnim)
         {
-            anim.SetFloat("Speed", maxSpeed > 0.01f ? (actualSpeed / maxSpeed) * 18f : 0f);
-            if (HasParam("Airborne")) anim.SetBool("Airborne", move != null && !move.IsGrounded);
+            anim.SetFloat("Speed", animSpeed, 0.08f, Time.deltaTime);   // mirror state, lightly damped
+            if (HasParam("Airborne")) anim.SetBool("Airborne", !move.IsGrounded);
         }
     }
-    Vector3 followVel;
 
     bool HasAnim => anim != null && anim.runtimeAnimatorController != null;
     bool HasParam(string n) { foreach (var pr in anim.parameters) if (pr.name == n) return true; return false; }
