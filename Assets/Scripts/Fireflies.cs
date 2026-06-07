@@ -7,13 +7,14 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class Fireflies : MonoBehaviour
 {
-    [SerializeField] int   count = 28;          // few — they live around the camera, not across the whole 1km zone
-    [SerializeField] float radius = 16f;        // window radius around the camera
-    [SerializeField] float height = 3.5f;       // how high above the ground they drift
+    [SerializeField] int   count = 9;           // few and gentle — they live around the camera, not the whole zone
+    [SerializeField] float radius = 17f;        // window radius around the camera (wider + fewer = sparser)
+    [SerializeField] float height = 2.2f;       // top of their vertical drift (they wander between the ground and this)
     [SerializeField] float moteSize = 0.07f;
     [SerializeField] Color glow = new Color(1f, 0.82f, 0.38f);
     [SerializeField] float brightness = 5f;     // HDR multiplier so bloom catches them
-    [SerializeField] float driftSpeed = 0.12f;  // slow, lazy drift (was zooming before)
+    [SerializeField] float floatRate = 0.35f;   // how fast each mote wanders (rad/s) — small = lazy
+    [SerializeField] float floatRadius = 1.6f;  // how far it roams from its anchor (m)
     [SerializeField] bool  alwaysOnPreview = false; // tick to see them in daylight while dressing
     [SerializeField] float dayIntensity = 0.7f;
     [SerializeField] float nightIntensity = 0.12f;
@@ -23,7 +24,7 @@ public class Fireflies : MonoBehaviour
     [SerializeField] string zoneName = "Forrest";
     [SerializeField] string terrainName = "Island1_Terrain";
 
-    Transform[] motes; Vector3[] seed; Light sun; Material mat; Terrain terrain;
+    Transform[] motes; Vector3[] seed; Vector3[] anchor; Light sun; Material mat; Terrain terrain;
     readonly ZoneSampler zone = new ZoneSampler(); bool zoneOk;
 
     public void Configure(IslandDefinition def, string zoneN, string terrainN)
@@ -39,7 +40,7 @@ public class Fireflies : MonoBehaviour
         mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
         mat.SetColor("_BaseColor", glow * brightness);
         var sphere = CreateSphereMesh();
-        motes = new Transform[count]; seed = new Vector3[count];
+        motes = new Transform[count]; seed = new Vector3[count]; anchor = new Vector3[count];
         for (int i = 0; i < count; i++)
         {
             var m = new GameObject("mote");
@@ -48,7 +49,8 @@ public class Fireflies : MonoBehaviour
             m.AddComponent<MeshRenderer>().sharedMaterial = mat;
             seed[i] = new Vector3(Random.value * 1000f, Random.value * 1000f, Random.value * 1000f);
             motes[i] = m.transform;
-            m.transform.position = RandomSpotAround(CamPos());
+            anchor[i] = RandomSpotAround(CamPos());
+            m.transform.position = anchor[i];
         }
     }
 
@@ -67,19 +69,19 @@ public class Fireflies : MonoBehaviour
             if (!show) { tr.localScale = Vector3.zero; continue; }
 
             var s = seed[i];
-            // lazy drift via offset sines
-            Vector3 p = tr.position;
-            p.x += Mathf.Sin(t * driftSpeed + s.x) * driftSpeed * 0.6f;
-            p.z += Mathf.Cos(t * driftSpeed * 0.9f + s.z) * driftSpeed * 0.6f;
-            // recycle motes that fall outside the camera window so density stays even as you walk
-            Vector2 flat = new Vector2(p.x - cam.x, p.z - cam.z);
-            if (flat.sqrMagnitude > radius * radius) p = RandomSpotAround(cam);
+            // recycle the ANCHOR (not the live position) when it falls behind the camera, so motes don't teleport
+            Vector2 flat = new Vector2(anchor[i].x - cam.x, anchor[i].z - cam.z);
+            if (flat.sqrMagnitude > radius * radius) anchor[i] = RandomSpotAround(cam);
 
-            float groundY = terrain != null ? terrain.SampleHeight(p) + terrain.transform.position.y : cam.y;
-            p.y = groundY + height * (0.4f + 0.4f * Mathf.Sin(t * driftSpeed * 1.3f + s.y));
-            tr.position = p;
+            // bounded wander around the anchor — two sine frequencies per axis so the path meanders (a flitting
+            // little flight) instead of a single repetitive orbit. Time-based, so it's frame-rate independent.
+            float ox = Mathf.Sin(t * floatRate + s.x) * floatRadius + Mathf.Sin(t * floatRate * 2.3f + s.z) * floatRadius * 0.35f;
+            float oz = Mathf.Cos(t * floatRate * 0.8f + s.z) * floatRadius + Mathf.Cos(t * floatRate * 2.1f + s.x) * floatRadius * 0.35f;
+            float oy = (0.5f + 0.5f * Mathf.Sin(t * floatRate * 1.3f + s.y)) * height;   // drifts up and down, 0..height
+            float groundY = terrain != null ? terrain.SampleHeight(anchor[i]) + terrain.transform.position.y : cam.y;
+            tr.position = new Vector3(anchor[i].x + ox, groundY + 0.2f + oy, anchor[i].z + oz);
 
-            float flick = 0.55f + 0.45f * Mathf.Sin(t * 5f + s.x * 13f);
+            float flick = 0.7f + 0.3f * Mathf.Sin(t * 1.6f + s.x * 13f);   // slow, soft pulse (not a fast twinkle)
             tr.localScale = Vector3.one * moteSize * flick * night;
         }
     }

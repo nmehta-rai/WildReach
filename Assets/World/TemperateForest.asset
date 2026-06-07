@@ -68,25 +68,3 @@ MonoBehaviour:
     footprint: 0
     normalizeHeight: 0
     nearProps: 1
-  - prefab: {fileID: 498818266487435554, guid: 9e0e0a156c4b74c8ea0c0257b093a0de, type: 3}
-    spacing: 48
-    density: 0.3
-    minScale: 0.85
-    maxScale: 1.25
-    slopeLimit: 30
-    groundSit: 1
-    sinkDepth: 1.2
-    footprint: 2.5
-    normalizeHeight: 45
-    nearProps: 0
-  - prefab: {fileID: 6710812558529405404, guid: bb5d61b7f4b3a4644ad703ba36a92c9a, type: 3}
-    spacing: 48
-    density: 0.3
-    minScale: 0.85
-    maxScale: 1.25
-    slopeLimit: 30
-    groundSit: 1
-    sinkDepth: 1.2
-    footprint: 2.5
-    normalizeHeight: 45
-    nearProps: 0

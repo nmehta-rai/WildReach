@@ -50,6 +50,12 @@ public static class IslandBuilder
         var hero = GameObject.Find("HomeTree");
         Vector3 heroPos = hero != null ? hero.transform.position : new Vector3(1e9f, 0, 1e9f);
 
+        // keep the small scattered trees clear of the big hand-placed climbing giants so nothing grows through them
+        var giants = new List<Vector2>();
+        var giantRoot = GameObject.Find("ClimbingTrees_" + def.name);
+        if (giantRoot != null) foreach (Transform g in giantRoot.transform) giants.Add(new Vector2(g.position.x, g.position.z));
+        const float giantClear = 9f;
+
         string rootName = "IslandScatter_" + def.name;
         if (onlyZone < 0)   // full build also clears legacy containers
             foreach (var name in new[] { "IslandBuild_" + def.name, "ForestSlice", rootName })
@@ -99,6 +105,9 @@ public static class IslandBuilder
                     if (nx < 0 || nx > 1 || nz < 0 || nz > 1) continue;
                     if (td.GetSteepness(nx, nz) > slopeCap) continue;
                     if (z.clearance > 0f && new Vector2(x - heroPos.x, zc - heroPos.z).magnitude < z.clearance) continue;
+                    bool nearGiant = false;
+                    foreach (var gp in giants) if ((new Vector2(x, zc) - gp).sqrMagnitude < giantClear * giantClear) { nearGiant = true; break; }
+                    if (nearGiant) continue;
                     if (Random.value > e.density) continue;
 
                     float instS = (normScale > 0f ? normScale : 1f) * Random.Range(e.minScale, e.maxScale);

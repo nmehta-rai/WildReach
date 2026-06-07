@@ -19,6 +19,9 @@ Shader "WildReach/GrassBlade"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
+            // global wind, set by WindManager: xy = direction*strength (world XZ), z = sway speed
+            float4 _WindParams;
+
             struct Attributes
             {
                 float4 positionOS : POSITION;
@@ -35,7 +38,14 @@ Shader "WildReach/GrassBlade"
             {
                 Varyings OUT;
                 UNITY_SETUP_INSTANCE_ID(IN);
-                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+                // WIND: bend the blade by the global wind, weighted by tip-ness (vertex colour brightness ~ height),
+                // so the base stays planted and the tip sways. Per-position phase so blades don't move in lockstep.
+                float3 posWS = TransformObjectToWorld(IN.positionOS.xyz);
+                half  tip   = max(IN.color.r, max(IN.color.g, IN.color.b));   // ~0 at base, ~1 at tip
+                float phase = posWS.x * 0.12 + posWS.z * 0.12;
+                float sway  = sin(_Time.y * _WindParams.z + phase);
+                posWS.xz   += _WindParams.xy * (tip * tip) * (0.65 + 0.35 * sway);
+                OUT.positionHCS = TransformWorldToHClip(posWS);
                 OUT.color = IN.color;
                 return OUT;
             }

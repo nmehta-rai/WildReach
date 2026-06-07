@@ -16,7 +16,7 @@ using UnityEditor;
 // Leaf placement is bounds-relative, so it looks right at whatever scale the scatter normalises the tree to.
 public static class SetupAncientTree
 {
-    const string Dir     = "Assets/Environment/Trees/AncientSentinel";
+    const string Dir       = "Assets/Environment/Trees/AncientSentinel";
     const string Fbx     = Dir + "/Meshy_AI_Ancient_Sentinel_0606030025_texture.fbx";
     const string BaseTex = Dir + "/Meshy_AI_Ancient_Sentinel_0606030025_texture.png";
     const string NrmTex  = Dir + "/Meshy_AI_Ancient_Sentinel_0606030025_texture_normal.png";
@@ -83,14 +83,35 @@ public static class SetupAncientTree
         }
 
         var pts = SampleBranchTips(root);
-        BuildCanopy(root, pts, leafMats, season);
+        var canopyMeshes = BuildCanopy(root, pts, leafMats, season);   // in-memory meshes, embedded below
 
         if (!AssetDatabase.IsValidFolder("Assets/Environment/Trees"))
             AssetDatabase.CreateFolder("Assets/Environment", "Trees");
-        var saved = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+
+        // EMBED the canopy meshes as SUB-ASSETS of the prefab. A separate .mesh asset keeps ghosting (file present,
+        // loads null) when anything near it reimports; a sub-asset lives inside the .prefab file itself and cannot
+        // orphan. Save once, then add each in-memory mesh into the returned prefab asset and re-point its MeshFilter
+        // — editing the asset in place (NOT a second SaveAsPrefabAsset, which would drop the freshly-added sub-asset).
+        var prefabAsset = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
         Object.DestroyImmediate(root);
-        RegisterInForest(saved);
-        Debug.Log($"[Tree] {season}: {pts.Count} canopy points → {prefabPath}, registered in the forest palette.");
+
+        int embedded = 0;
+        var cn = prefabAsset.transform.Find("Canopy");
+        if (cn != null)
+            foreach (Transform leaf in cn)
+                if (canopyMeshes.TryGetValue(leaf.name, out var mesh) && mesh != null)
+                {
+                    mesh.name = $"Canopy_{season}_{leaf.name}";
+                    AssetDatabase.AddObjectToAsset(mesh, prefabAsset);
+                    var mf = leaf.GetComponent<MeshFilter>(); if (mf != null) mf.sharedMesh = mesh;
+                    embedded++;
+                }
+        EditorUtility.SetDirty(prefabAsset);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.ImportAsset(prefabPath);
+
+        RegisterInForest(prefabAsset);
+        Debug.Log($"[Tree] {season}: {pts.Count} canopy points, embedded {embedded} canopy mesh(es) in {prefabPath} (sub-assets, can't ghost).");
     }
 
     static Material BuildBark()
@@ -175,10 +196,12 @@ public static class SetupAncientTree
     }
 
     // Build the foliage as combined meshes (one child per leaf material) of crossed quads facing outward.
-    static void BuildCanopy(GameObject root, List<Vector3> pts, Material[] leafMats, string season)
+    // Returns leafChildName -> in-memory mesh; the caller embeds them into the prefab as sub-assets.
+    static Dictionary<string, Mesh> BuildCanopy(GameObject root, List<Vector3> pts, Material[] leafMats, string season)
     {
-        if (pts.Count == 0) { Debug.LogWarning("[Tree] no canopy points — is the mesh readable?"); return; }
-        if (leafMats.Length == 0) { Debug.LogWarning("[Tree] no leaf materials loaded."); return; }
+        var result = new Dictionary<string, Mesh>();
+        if (pts.Count == 0) { Debug.LogWarning("[Tree] no canopy points — is the mesh readable?"); return result; }
+        if (leafMats.Length == 0) { Debug.LogWarning("[Tree] no leaf materials loaded."); return result; }
         var b = new Bounds(pts[0], Vector3.zero);
         foreach (var p in pts) b.Encapsulate(p);
         float card = CardSizeFrac * Mathf.Max(b.size.y, b.size.x);
@@ -210,16 +233,13 @@ public static class SetupAncientTree
             var combined = new Mesh { name = $"CanopyLeaves_{season}_{kv.Key}" };
             combined.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             combined.CombineMeshes(kv.Value.ToArray(), true, true);
-            // persist the combined mesh as its OWN asset and reference THAT — a prefab can't hold an in-memory
-            // mesh (it serialises as null on reload). Overwrite any prior build for re-runnability.
-            var meshPath = $"{Dir}/Canopy_{season}_{kv.Key}.mesh";
-            AssetDatabase.DeleteAsset(meshPath);
-            AssetDatabase.CreateAsset(combined, meshPath);
             var go = new GameObject("Leaves_" + kv.Key);
             go.transform.SetParent(canopy.transform, false);
-            go.AddComponent<MeshFilter>().sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
+            go.AddComponent<MeshFilter>().sharedMesh = combined;          // in-memory now; embedded into the prefab later
             go.AddComponent<MeshRenderer>().sharedMaterial = leafMats[kv.Key];
+            result["Leaves_" + kv.Key] = combined;
         }
+        return result;
     }
 
     // Register the tree in the Forrest zone's scatter palette as a sparse, height-normalised giant. Both the green

@@ -11,27 +11,28 @@ public static class SetupSkyBodies
     const string SunTex = Dir + "/Sun.png";
     const string MoonTex = Dir + "/Moon.png";
 
-    [MenuItem("WildReach/World/Setup Sky Bodies (sun + moon)")]
+    [MenuItem("WildReach/World/Setup Sky Bodies (moon)")]
     static void Setup()
     {
         var dnc = Object.FindAnyObjectByType<DayNightCycle>();
         if (dnc == null) { Debug.LogError("[Sky] Run 'Setup Day-Night Cycle' first."); return; }
 
-        var sun  = GameObject.Find("Directional Light");
         var moon = GameObject.Find("Moonlight");
-        if (sun == null)  { Debug.LogError("[Sky] No 'Directional Light' (sun) found."); return; }
 
-        var sunDisc  = BuildBody("SunDisc",  SunTex,  new Color(1f, 0.9f, 0.6f),  140f, sun.transform);
+        // NO sun billboard — the default lit sky reads better for daytime. Remove any existing SunDisc + unwire it.
+        var oldSun = GameObject.Find("SunDisc");
+        if (oldSun != null) Object.DestroyImmediate(oldSun);
+
         var moonDisc = moon != null ? BuildBody("MoonDisc", MoonTex, new Color(0.7f, 0.8f, 1f), 120f, moon.transform) : null;
 
         var so = new SerializedObject(dnc);
-        so.FindProperty("sunDisc").objectReferenceValue = sunDisc.transform;
+        so.FindProperty("sunDisc").objectReferenceValue = null;        // sun uses the default lighting, no disc
         if (moonDisc != null) so.FindProperty("moonDisc").objectReferenceValue = moonDisc.transform;
         so.ApplyModifiedProperties();
         EditorUtility.SetDirty(dnc);
 
-        Debug.Log("[Sky] Sun + moon billboards built and wired. Press Play (or scrub Time Of Day): the sun rides the " +
-                  "daytime sky, the moon the night. Tune size by scaling SunDisc/MoonDisc; tune glow via their material _BaseColor (HDR).");
+        Debug.Log("[Sky] Moon billboard built; sun uses the default sky (no disc). Scrub Time Of Day or Play: " +
+                  "the moon rides the night sky. Tune size by scaling MoonDisc; tune glow via its material _BaseColor (HDR).");
     }
 
     static GameObject BuildBody(string name, string texPath, Color tint, float size, Transform light)
