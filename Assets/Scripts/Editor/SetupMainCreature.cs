@@ -13,7 +13,7 @@ public static class SetupMainCreature
     // per-creature roam speed (m/s). Default if not listed. A bison is heavy/slow; a hare is quick.
     static readonly System.Collections.Generic.Dictionary<string, float> Speeds = new()
     {
-        { "Thunderhoof", 1.0f }, { "Sloth", 0.8f }, { "Bear", 2.4f }, { "Fawn", 3.2f },
+        { "Thunderhoof", 1.0f }, { "Sloth", 0.5f }, { "Bear", 2.4f }, { "Fawn", 3.2f },
         { "Hare", 4.5f }, { "Mandrill", 2.6f }, { "Chameleon", 1.6f }, { "Leafwyrm", 2.0f },
     };
 

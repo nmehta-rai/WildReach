@@ -112,3 +112,11 @@ InitTestScene*.unity*
 # macOS
 .DS_Store
 **/.DS_Store
+
+# Unity crash-recovery backups (transient)
+/Assets/_Recovery/
+/Assets/_Recovery.meta
+
+# Blender FBX embedded-texture extraction (regenerated on import)
+*.fbm/
+*.fbm.meta
