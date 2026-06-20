@@ -9,8 +9,10 @@ using UnityEngine;
 public class DayNightCycle : MonoBehaviour
 {
     [SerializeField] Light sun;
-    [Tooltip("Seconds for one full day-night cycle (Play mode). 120 was way too fast; ~600-900 feels right.")]
-    [SerializeField] float dayLengthSeconds = 720f;
+    [Tooltip("Seconds for one full day-night cycle (Play mode). Higher = slower. Re-run Setup Day-Night Cycle to apply.")]
+    [SerializeField] float dayLengthSeconds = 1800f;   // 30 min full cycle (~15 min daylight); was 720 = too fast
+    [Tooltip("How far the sun/moon discs are parked from the camera.")]
+    [SerializeField] float discDistance = 600f;
     [Range(0f, 1f)] [Tooltip("0/1 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset.")]
     [SerializeField] float timeOfDay = 0.35f;
     [SerializeField] bool autoCycle = true;
@@ -38,6 +40,9 @@ public class DayNightCycle : MonoBehaviour
     [SerializeField] float moonIntensity = 0.28f;
 
     public bool IsDay => sun != null && -sun.transform.forward.y > 0.15f;
+
+    // Read/restore the time of day (used by the save system so a resumed game keeps the same time).
+    public float TimeOfDay { get => timeOfDay; set { timeOfDay = Mathf.Repeat(value, 1f); Apply(); } }
 
     void Awake()      { EnsureSun(); }
     void OnValidate() { EnsureSun(); Apply(); }
@@ -84,8 +89,8 @@ public class DayNightCycle : MonoBehaviour
         RenderSettings.ambientLight = Color.Lerp(nightAmbient, dayAmbient, day);
         RenderSettings.fogColor     = Color.Lerp(nightFog, dayFog, day);
 
-        // Sun disc: visible while the sun is up (the SkyBillboard parks it at the sun's direction, facing camera).
-        if (sunDisc != null) sunDisc.gameObject.SetActive(day > 0.02f);
+        // Sun disc: visible + parked at the sun's direction while the sun is up.
+        PlaceDisc(sunDisc, sun.transform, day > 0.02f);
 
         // Moon ORBITS OPPOSITE the sun (half a cycle out of phase) on the same azimuth track, so as the sun sets on
         // one horizon the moon rises on the other — they cross the sky in turn instead of the moon popping in fixed.
@@ -98,8 +103,25 @@ public class DayNightCycle : MonoBehaviour
             moon.intensity = moonIntensity * night;                   // cool fill only while the sun is gone
             moon.enabled = night > 0.02f;
         }
-        // Visible moon disc: show whenever the moon is above the horizon (SkyBillboard parks + faces it each frame).
-        if (moonDisc != null) moonDisc.gameObject.SetActive(moonUp > 0.02f);
+        // Moon disc: DayNightCycle parks it at the MOON's direction itself (not via a separately-wired SkyBillboard,
+        // which could point at the wrong light — that was the "moon stuck on the sun side" bug). Single source of truth.
+        PlaceDisc(moonDisc, moon != null ? moon.transform : null, moonUp > 0.02f);
+    }
+
+    // Park a sky-body disc in the direction its light comes FROM, at a fixed distance from the camera, facing it.
+    // Repairs any SkyBillboard's sourceLight so it can't fight us by following a stale/wrong light.
+    void PlaceDisc(Transform disc, Transform body, bool visible)
+    {
+        if (disc == null) return;
+        if (disc.gameObject.activeSelf != visible) disc.gameObject.SetActive(visible);
+        if (!visible || body == null) return;
+        var cam = Camera.main;
+        if (cam == null) return;
+        var bb = disc.GetComponent<SkyBillboard>();
+        if (bb != null) { bb.sourceLight = body; bb.distance = discDistance; }
+        Vector3 dir = -body.forward;                                   // toward the body = opposite the light travel
+        disc.position = cam.transform.position + dir * discDistance;
+        disc.rotation = Quaternion.LookRotation(disc.position - cam.transform.position, Vector3.up);
     }
 
     // Used by the WildReach/Time menu for editor dressing.

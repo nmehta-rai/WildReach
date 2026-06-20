@@ -9,6 +9,10 @@ public class PlayerAnimator : MonoBehaviour
     ClimbingSystem climbing;
     SwimSystem swim;
 
+    [SerializeField] float hardLandDrop = 4.5f;   // only a fall taller than this plays Hard Landing (jumps reach ~3.2m)
+    bool airborne;
+    float peakY;
+
     void Awake()
     {
         animator = GetComponent<Animator>();
@@ -39,7 +43,25 @@ public class PlayerAnimator : MonoBehaviour
 
         animator.SetFloat("Speed", norm, 0.1f, Time.deltaTime);   // small damp = smooth blend
         animator.SetFloat("VerticalVelocity", rb.linearVelocity.y);
-        animator.SetBool("IsGrounded", movement.IsGrounded);
+        bool grounded = movement.IsGrounded;
+        animator.SetBool("IsGrounded", grounded);
+
+        // Hard-landing by fall DISTANCE (robust — landing-frame velocity is noisy because the ground-ray leads
+        // the collider). Track the peak height while airborne; on touchdown, only a drop > hardLandDrop plays it.
+        float y = rb.position.y;
+        if (!grounded)
+        {
+            if (!airborne) { airborne = true; peakY = y; }
+            else if (y > peakY) peakY = y;
+        }
+        else if (airborne)
+        {
+            airborne = false;
+            float drop = peakY - y;
+            if (drop > hardLandDrop) { animator.SetTrigger("HardLand"); movement.LockGround(0.5f); }   // pin during the heavy land
+            else animator.SetTrigger("Landed");   // soft touchdown — exits the jump clip in sync with the physics
+            Debug.Log($"[Land] drop {drop:0.0}m -> {(drop > hardLandDrop ? "HARD" : "soft")}");
+        }
 
         // Swimming: tread (idle) ↔ swim (moving) by the same normalised speed.
         bool isSwimming = swim != null && swim.IsSwimming;
@@ -53,8 +75,10 @@ public class PlayerAnimator : MonoBehaviour
         if (isClimbing)
         {
             float dir = climbing.ClimbVertical;                   // -1 … 1
+            float strafe = climbing.ClimbHorizontal;              // -1 (left) … 1 (right)
             animator.SetFloat("ClimbDir", dir, 0.08f, Time.deltaTime);
-            animator.SetFloat("ClimbMag", Mathf.Abs(dir));
+            animator.SetFloat("ClimbStrafe", strafe, 0.08f, Time.deltaTime);
+            animator.SetFloat("ClimbMag", Mathf.Max(Mathf.Abs(dir), Mathf.Abs(strafe)));
         }
     }
 }

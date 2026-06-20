@@ -13,8 +13,8 @@ public static class SetupMainCreature
     // per-creature roam speed (m/s). Default if not listed. A bison is heavy/slow; a hare is quick.
     static readonly System.Collections.Generic.Dictionary<string, float> Speeds = new()
     {
-        { "Thunderhoof", 1.0f }, { "Sloth", 0.5f }, { "Bear", 2.4f }, { "Fawn", 3.2f },
-        { "Hare", 4.5f }, { "Mandrill", 2.6f }, { "Chameleon", 1.6f }, { "Leafwyrm", 2.0f },
+        { "Thunderhoof", 1.0f }, { "Sloth", 0.5f }, { "Bear", 2.4f }, { "Fawn", 1.0f },
+        { "Hare", 1.2f }, { "Mandrill", 1.1f }, { "Chameleon", 1.6f }, { "Leafwyrm", 0.7f },
     };
 
     [MenuItem("WildReach/Creatures/Setup Main Creature (from selected FBX)")]

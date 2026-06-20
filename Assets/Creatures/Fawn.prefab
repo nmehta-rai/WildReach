@@ -1,0 +1,120 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &2586896446094485744
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 565670341225674080, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 520a8dfb107d14c40b277c7ca6d308c2, type: 2}
+    - target: {fileID: 919132149155446097, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      propertyPath: m_Name
+      value: Fawn
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: ccbc2cc6d67da4289a102c01db5814e5, type: 2}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4977281051082192561}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5647114910961015042}
+  m_SourcePrefab: {fileID: 100100000, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+--- !u!1 &3397940962811680161 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 88dc277bc6a7e484cb4260c5b3ca4609, type: 3}
+  m_PrefabInstance: {fileID: 2586896446094485744}
+  m_PrefabAsset: {fileID: 0}
+--- !u!136 &4977281051082192561
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3397940962811680161}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.3242235
+  m_Height: 1.1294502
+  m_Direction: 2
+  m_Center: {x: 0.01594007, y: 0.5698617, z: 0.034473956}
+--- !u!114 &5647114910961015042
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3397940962811680161}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea57432f9dafc4dc08d01dff07f0ea3b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZoneRoamer
+  island: {fileID: 0}
+  zoneName: Forrest
+  terrainName: Island1_Terrain
+  roamRadius: 90
+  speed: 1
+  turnDegPerSec: 90
+  pauseRange: {x: 1.5, y: 4}

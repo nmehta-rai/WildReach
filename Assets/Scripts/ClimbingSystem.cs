@@ -33,6 +33,7 @@ public class ClimbingSystem : MonoBehaviour
     public bool IsClimbing => isClimbing;
     public Vector3 WallNormal => surfNormal;
     public float ClimbVertical { get; private set; }   // drives the up/down climb animation
+    public float ClimbHorizontal { get; private set; } // drives the left/right shimmy animation
 
     void Awake()
     {
@@ -68,6 +69,7 @@ public class ClimbingSystem : MonoBehaviour
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
         ClimbVertical = v;
+        ClimbHorizontal = h;
         bool moving = Mathf.Abs(h) > 0.05f || Mathf.Abs(v) > 0.05f;
 
         // tangent basis on the surface (world-up reference keeps "up" intuitive)

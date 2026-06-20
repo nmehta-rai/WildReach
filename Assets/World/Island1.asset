@@ -63,6 +63,10 @@ MonoBehaviour:
       count: 10
     - prefab: {fileID: 5180885641319736975, guid: a776e295e776c4fdf819431fb7d91823, type: 3}
       count: 20
+    - prefab: {fileID: 6266216940466274503, guid: 3efbc9bb5b22f44a3a95502c944b1f2e, type: 3}
+      count: 40
+    - prefab: {fileID: 3397940962811680161, guid: 69fcff45f9d39460a91403d04de67bfe, type: 3}
+      count: 35
   - name: Road
     color: {r: 1, g: 0.627451, b: 0.4784314, a: 1}
     showOverlay: 1

@@ -25,6 +25,10 @@ public static class SetupSkyBodies
 
         var moonDisc = moon != null ? BuildBody("MoonDisc", MoonTex, new Color(0.7f, 0.8f, 1f), 120f, moon.transform) : null;
 
+        // Kill the old plain emissive sphere ("Moon") so it can't linger as a stray second moon.
+        var oldMoonSphere = GameObject.Find("Moon");
+        if (oldMoonSphere != null && oldMoonSphere != moonDisc) Object.DestroyImmediate(oldMoonSphere);
+
         var so = new SerializedObject(dnc);
         so.FindProperty("sunDisc").objectReferenceValue = null;        // sun uses the default lighting, no disc
         if (moonDisc != null) so.FindProperty("moonDisc").objectReferenceValue = moonDisc.transform;

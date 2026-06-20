@@ -34,14 +34,21 @@ public class RespawnController : MonoBehaviour
         yield return Fade(0f, 1f);
         yield return new WaitForSeconds(blackHold);
 
-        if (respawnPoint != null) transform.position = respawnPoint.position;
-        if (rb != null) rb.linearVelocity = Vector3.zero;
-        while (hp.Hearts < hp.MaxHearts) hp.Heal();   // full heal
-        foreach (var p in FindObjectsByType<Predator>(FindObjectsSortMode.None)) p.GoHome();   // send mobs back to their lairs
+        ToSpawn();
 
         yield return Fade(1f, 0f);
         if (move != null) move.Enabled = true;
         busy = false;
+    }
+
+    // Snap the player to the spawn point at full health, mobs sent home. Used by death-respawn AND the pause
+    // menu's "Restart to Spawn".
+    public void ToSpawn()
+    {
+        if (respawnPoint != null) transform.position = respawnPoint.position;
+        if (rb != null) rb.linearVelocity = Vector3.zero;
+        while (hp.Hearts < hp.MaxHearts) hp.Heal();   // full heal
+        foreach (var p in FindObjectsByType<Predator>(FindObjectsSortMode.None)) p.GoHome();   // send mobs back to their lairs
     }
 
     IEnumerator Fade(float a, float b)

@@ -21,6 +21,7 @@ public static class SetupDayNight
         so.FindProperty("sun").objectReferenceValue = sun;
         so.FindProperty("moon").objectReferenceValue = moon;
         so.FindProperty("moonDisc").objectReferenceValue = disc.transform;
+        so.FindProperty("dayLengthSeconds").floatValue = 1800f;        // 30-min cycle; 720 was too fast
         // Apply the tuned night values (re-running Setup re-applies these).
         so.FindProperty("moonIntensity").floatValue = 0.28f;
         so.FindProperty("nightAmbient").colorValue  = new Color(0.11f, 0.13f, 0.21f);
@@ -81,6 +82,11 @@ public static class SetupDayNight
 
     static Transform GetOrMakeMoonDisc()
     {
+        // Prefer the textured billboard from "Setup Sky Bodies" if it exists — that's the real moon image. Only
+        // fall back to the plain emissive sphere if no billboard has been built yet.
+        var billboard = GameObject.Find("MoonDisc");
+        if (billboard != null) return billboard.transform;
+
         var go = GameObject.Find("Moon");
         if (go == null)
         {

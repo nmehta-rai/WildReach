@@ -21,6 +21,9 @@ public class PlayerMovement : MonoBehaviour
 
     public bool Enabled { get; set; } = true;
     public bool IsGrounded => isGrounded;
+
+    float groundLockUntil;
+    public void LockGround(float dur) => groundLockUntil = Time.time + dur;   // pin in place (e.g. hard-landing recovery)
     public float WalkSpeed => walkSpeed;
     public float RunSpeed  => runSpeed;
 
@@ -69,6 +72,9 @@ public class PlayerMovement : MonoBehaviour
         Vector3 move = (camForward * v + camRight * h).normalized * speed;
 
         rb.linearVelocity = new Vector3(move.x, rb.linearVelocity.y, move.z);
+
+        // pinned during hard-landing recovery — no sliding forward through the animation
+        if (Time.time < groundLockUntil) { rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f); PlanarSpeed = 0f; }
 
         if (jumpQueued)
         {

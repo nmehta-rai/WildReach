@@ -113,8 +113,16 @@ public class WildReachPanel : EditorWindow
             Section(cat);
             foreach (var t in shown.Where(t => t.category == cat).OrderBy(t => t.prio).ThenBy(t => t.label))
                 if (GUILayout.Button(t.label, GUILayout.Height(22)))
-                    if (!EditorApplication.ExecuteMenuItem(t.execPath))
-                        Debug.LogWarning("[Panel] Could not execute: " + t.execPath);
+                {
+                    // defer to AFTER this OnGUI pass — tools that reimport assets mid-render unbalance the
+                    // GUILayout stack ("EndLayoutGroup: BeginLayoutGroup must be called first")
+                    var exec = t.execPath;
+                    EditorApplication.delayCall += () =>
+                    {
+                        if (!EditorApplication.ExecuteMenuItem(exec))
+                            Debug.LogWarning("[Panel] Could not execute: " + exec);
+                    };
+                }
         }
 
         GUILayout.Space(8);
