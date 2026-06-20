@@ -8,10 +8,15 @@ public class PlayerAnimator : MonoBehaviour
     PlayerMovement movement;
     ClimbingSystem climbing;
     SwimSystem swim;
+    PlayerHurt hurt;
 
     [SerializeField] float hardLandDrop = 4.5f;   // only a fall taller than this plays Hard Landing (jumps reach ~3.2m)
     bool airborne;
     float peakY;
+
+    Transform hips;                 // the climb travel lives on this bone (Unity Generic won't lift it to deltaPosition)
+    Vector3 hipsRest, hipsPrev;
+    bool climbTracking;
 
     void Awake()
     {
@@ -20,12 +25,40 @@ public class PlayerAnimator : MonoBehaviour
         movement = GetComponentInParent<PlayerMovement>();
         climbing = GetComponentInParent<ClimbingSystem>();
         swim = GetComponentInParent<SwimSystem>();
+        hurt = GetComponentInParent<PlayerHurt>();
+        hips = FindDeep(transform, "hips");
+    }
+
+    static Transform FindDeep(Transform t, string contains)
+    {
+        if (t.name.ToLower().Contains(contains)) return t;
+        foreach (Transform c in t) { var r = FindDeep(c, contains); if (r != null) return r; }
+        return null;
     }
 
     void OnEnable()  { if (movement != null) movement.Jumped += OnJump; }
     void OnDisable() { if (movement != null) movement.Jumped -= OnJump; }
 
     void OnJump() => animator.SetTrigger("Jump");
+
+    // MANUAL climb root motion. Unity Generic leaves the climb travel on the Hips BONE (195 position curves) and
+    // refuses to lift it into deltaPosition (always 0). So each frame we read the Hips' own movement, hand the
+    // delta to the ClimbingSystem to drive the CAPSULE, then pin the Hips back to its climb-start position so the
+    // visual doesn't ALSO translate (no double-move). Result: the body climbs the wall exactly as the limbs pull.
+    void LateUpdate()
+    {
+        if (climbing == null || !climbing.IsClimbing || hips == null) { climbTracking = false; return; }
+        Vector3 now = hips.localPosition;
+        if (!climbTracking) { hipsRest = now; hipsPrev = now; climbTracking = true; }   // first climb frame: anchor
+        else
+        {
+            Vector3 delta = now - hipsPrev;
+            if (delta.magnitude < 0.3f)   // reject the loop-wrap snap (~the full travel); per-frame climb is tiny
+                climbing.AddRootMotion(hips.parent.TransformVector(delta));
+            hipsPrev = now;
+        }
+        hips.localPosition = hipsRest;     // remove the climb (and bob) from the visual — the capsule carries it instead
+    }
 
     void Update()
     {
@@ -58,7 +91,7 @@ public class PlayerAnimator : MonoBehaviour
         {
             airborne = false;
             float drop = peakY - y;
-            if (drop > hardLandDrop) { animator.SetTrigger("HardLand"); movement.LockGround(0.5f); }   // pin during the heavy land
+            if (drop > hardLandDrop) { animator.SetTrigger("HardLand"); movement.LockGround(0.5f); if (hurt != null) hurt.Damage(1); }   // pin + red flash + lose a heart
             else animator.SetTrigger("Landed");   // soft touchdown — exits the jump clip in sync with the physics
             Debug.Log($"[Land] drop {drop:0.0}m -> {(drop > hardLandDrop ? "HARD" : "soft")}");
         }

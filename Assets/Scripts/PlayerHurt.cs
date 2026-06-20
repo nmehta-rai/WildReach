@@ -40,6 +40,15 @@ public class PlayerHurt : MonoBehaviour, IHittable
         running = StartCoroutine(React());
     }
 
+    // Environmental damage (a hard fall, etc.): lose hearts + the red flash, but NO knockback shove.
+    public void Damage(int damage)
+    {
+        if (hp == null || hp.IsDead) return;
+        hp.Damage(damage);
+        if (running != null) StopCoroutine(running);
+        running = StartCoroutine(React());
+    }
+
     IEnumerator React()
     {
         if (move != null) move.Enabled = false;       // hit-stun: let the knockback carry

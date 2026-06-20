@@ -9,7 +9,7 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerMovement), typeof(StaminaSystem))]
 public class ClimbingSystem : MonoBehaviour
 {
-    [SerializeField] float climbSpeed   = 3f;
+    [SerializeField] float rootMotionScale = 1f;   // scales the animation's own climb travel (movement = root motion, not a constant)
     [SerializeField] float grabDistance = 2.5f;   // reach to grab a wall
     [SerializeField] float bodyOffset   = 0.45f;  // body centre sits this far off the surface
     [SerializeField] float probeOut     = 0.6f;   // re-projection ray starts this far out from the surface
@@ -29,6 +29,11 @@ public class ClimbingSystem : MonoBehaviour
     Vector3 anchor;      // current grip point ON the surface
     Vector3 surfNormal;  // smoothed surface normal at the anchor
     int missFrames;
+    Vector3 pendingRootMotion;   // climb animation's root delta, accumulated by PlayerAnimator.OnAnimatorMove
+
+    // Fed each frame from the climb clip's root motion (the body translating as the limbs pull). FixedUpdate
+    // consumes it as the actual movement — so the body is driven BY the animation, not a disconnected constant.
+    public void AddRootMotion(Vector3 worldDelta) { if (isClimbing) pendingRootMotion += worldDelta; }
 
     public bool IsClimbing => isClimbing;
     public Vector3 WallNormal => surfNormal;
@@ -72,9 +77,14 @@ public class ClimbingSystem : MonoBehaviour
         ClimbHorizontal = h;
         bool moving = Mathf.Abs(h) > 0.05f || Mathf.Abs(v) > 0.05f;
 
-        // tangent basis on the surface (world-up reference keeps "up" intuitive)
+        // tangent basis on the surface (used by SampleSurface's fan)
         TangentBasis(surfNormal, out var right, out var wallUp);
-        Vector3 desired = anchor + (right * h + wallUp * v) * climbSpeed * dt;
+
+        // MOVEMENT = the climb animation's root motion, projected onto the wall (so the body moves exactly as the
+        // limbs pull — connected, no slide). Input (h/v) only chose WHICH clip plays + gates it via ClimbMag.
+        Vector3 tangentMove = Vector3.ProjectOnPlane(pendingRootMotion, surfNormal) * rootMotionScale;
+        pendingRootMotion = Vector3.zero;
+        Vector3 desired = anchor + tangentMove;
 
         // sample the surface around the new grip: keep the real point, average the normals
         if (SampleSurface(desired, surfNormal, right, wallUp, out var pt, out var n))

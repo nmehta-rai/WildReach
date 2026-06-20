@@ -23,6 +23,7 @@ public static class SetupAzurePlayer
         var imp = (ModelImporter)AssetImporter.GetAtPath(Fbx);
         imp.animationType = ModelImporterAnimationType.Generic;
         imp.avatarSetup   = ModelImporterAvatarSetup.CreateFromThisModel;
+        imp.motionNodeName = "mixamorig:Hips";   // Generic root-motion node — WITHOUT this, deltaPosition is always 0 (climb root motion never extracted)
         imp.importLights  = false; imp.importCameras = false;
         var clips = imp.defaultClipAnimations;
         // continuous actions must loop; one-shots (jump, land, roll, punch, hit, death, sit-down, pickup) must not
@@ -30,8 +31,20 @@ public static class SetupAzurePlayer
                               "climb", "shimmy", "swim", "tread", "float", "sleep", "fall" };
         for (int i = 0; i < clips.Length; i++)
         {
-            bool shouldLoop = loopers.Any(l => clips[i].name.ToLower().Contains(l));
-            if (clips[i].loopTime != shouldLoop) clips[i].loopTime = shouldLoop;
+            var ln = clips[i].name.ToLower();
+            clips[i].loopTime = loopers.Any(l => ln.Contains(l));
+            if (ln.Contains("climb") || ln.Contains("shimmy"))   // root-motion-driven: DON'T bake the travel into the pose
+            {
+                clips[i].keepOriginalPositionY  = true; clips[i].lockRootHeightY    = false;
+                clips[i].keepOriginalPositionXZ = true; clips[i].lockRootPositionXZ = false;
+                clips[i].keepOriginalOrientation = true; clips[i].lockRootRotation  = false;
+            }
+            else   // everything else is in-place: bake the Hips motion (incl. the bob) into the pose -> no root motion
+            {
+                clips[i].lockRootHeightY = true;
+                clips[i].lockRootPositionXZ = true;
+                clips[i].lockRootRotation = true;
+            }
         }
         imp.clipAnimations = clips;
         imp.SaveAndReimport();
@@ -61,7 +74,7 @@ public static class SetupAzurePlayer
 
         var animator = inst.GetComponent<Animator>(); if (animator == null) animator = inst.AddComponent<Animator>();
         animator.runtimeAnimatorController = ctrl;
-        animator.applyRootMotion = false;
+        animator.applyRootMotion = true;   // climb is root-motion-driven; PlayerAnimator.OnAnimatorMove routes it (in-place clips are no-ops)
         var avatar = AssetDatabase.LoadAllAssetsAtPath(Fbx).OfType<Avatar>().FirstOrDefault();
         if (avatar != null) animator.avatar = avatar;
         if (inst.GetComponent<PlayerAnimator>() == null) inst.AddComponent<PlayerAnimator>();
