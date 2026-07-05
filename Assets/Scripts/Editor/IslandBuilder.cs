@@ -15,7 +15,7 @@ public static class IslandBuilder
             var go = GameObject.Find(def.terrainName);
             if (go != null) { var t = go.GetComponent<Terrain>(); if (t != null) return t; }
         }
-        return Terrain.activeTerrain ?? Object.FindFirstObjectByType<Terrain>();
+        return Terrain.activeTerrain ?? Object.FindAnyObjectByType<Terrain>();
     }
 
     // zone index per texel (-1 = unpainted), row-major (y*res + x), v along +Z
@@ -316,14 +316,18 @@ public static class IslandBuilder
             {
                 var go = existing != null ? existing.gameObject : new GameObject(z.name);
                 go.transform.SetParent(root.transform, false);
-                var ff = go.GetComponent<Fireflies>() ?? go.AddComponent<Fireflies>();
+                // rebuild the component every apply — the tuning lives in the script's defaults, and a stale
+                // serialized copy in the scene would silently keep old values otherwise
+                var old = go.GetComponent<Fireflies>();
+                if (old != null) Object.DestroyImmediate(old);
+                var ff = go.AddComponent<Fireflies>();
                 ff.Configure(def, z.name, def.terrainName);
                 on++;
             }
             else if (existing != null) Object.DestroyImmediate(existing.gameObject);
         }
         // also clear out any legacy single "Fireflies" emitters from the old (pre-zone) tool
-        foreach (var stray in Object.FindObjectsByType<Fireflies>(FindObjectsSortMode.None))
+        foreach (var stray in Object.FindObjectsByType<Fireflies>())
             if (stray.transform.parent == null && stray.gameObject.name == "Fireflies") Object.DestroyImmediate(stray.gameObject);
         if (root.transform.childCount == 0) Object.DestroyImmediate(root);
         Debug.Log($"[Fireflies] {on} zone(s) now have fireflies (glow at night when you're inside them).");
@@ -346,7 +350,7 @@ public static class IslandBuilder
 
         var inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
         inst.name = "Pet";
-        var pm = Object.FindFirstObjectByType<PlayerMovement>();
+        var pm = Object.FindAnyObjectByType<PlayerMovement>();
         if (pm != null) inst.transform.position = pm.transform.position + pm.transform.right * 1.5f - pm.transform.forward * 0.5f;
 
         // read the creature's OWN pace before stripping its AI, so the pet follows at its natural speed

@@ -7,14 +7,16 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class Fireflies : MonoBehaviour
 {
-    [SerializeField] int   count = 9;           // few and gentle — they live around the camera, not the whole zone
-    [SerializeField] float radius = 17f;        // window radius around the camera (wider + fewer = sparser)
-    [SerializeField] float height = 2.2f;       // top of their vertical drift (they wander between the ground and this)
-    [SerializeField] float moteSize = 0.07f;
+    [SerializeField] int   count = 7;           // few and gentle — they live around the camera, not the whole zone
+    [SerializeField] float radius = 20f;        // window radius around the camera (wider + fewer = sparser)
+    [SerializeField] float height = 1.5f;       // top of their vertical drift (they hover low, near the grass)
+    [SerializeField] float moteSize = 0.045f;
     [SerializeField] Color glow = new Color(1f, 0.82f, 0.38f);
-    [SerializeField] float brightness = 5f;     // HDR multiplier so bloom catches them
-    [SerializeField] float floatRate = 0.35f;   // how fast each mote wanders (rad/s) — small = lazy
-    [SerializeField] float floatRadius = 1.6f;  // how far it roams from its anchor (m)
+    [SerializeField] float brightness = 4f;     // HDR multiplier so bloom catches them
+    [SerializeField] float floatRate = 0.1f;    // how fast each mote wanders (rad/s) — small = lazy
+    [SerializeField] float floatRadius = 0.7f;  // how far it roams from its anchor (m)
+    [SerializeField] Vector2 blinkPeriod = new Vector2(4f, 7f);  // seconds per blink cycle, randomized per mote
+    [SerializeField] float litFraction = 0.22f; // slice of the cycle the mote is actually glowing
     [SerializeField] bool  alwaysOnPreview = false; // tick to see them in daylight while dressing
     [SerializeField] float dayIntensity = 0.7f;
     [SerializeField] float nightIntensity = 0.12f;
@@ -24,8 +26,10 @@ public class Fireflies : MonoBehaviour
     [SerializeField] string zoneName = "Forrest";
     [SerializeField] string terrainName = "Island1_Terrain";
 
-    Transform[] motes; Vector3[] seed; Vector3[] anchor; Light sun; Material mat; Terrain terrain;
+    Transform[] motes; Vector3[] seed; Vector3[] anchor; float[] period; Light sun; Material mat; Terrain terrain;
+    Renderer[] rends; MaterialPropertyBlock mpb;
     readonly ZoneSampler zone = new ZoneSampler(); bool zoneOk;
+    static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
     public void Configure(IslandDefinition def, string zoneN, string terrainN)
     { island = def; zoneName = zoneN; terrainName = terrainN; }
@@ -34,20 +38,24 @@ public class Fireflies : MonoBehaviour
     {
         sun = FindSun();
         var go = !string.IsNullOrEmpty(terrainName) ? GameObject.Find(terrainName) : null;
-        terrain = go != null ? go.GetComponent<Terrain>() : (Terrain.activeTerrain ?? Object.FindFirstObjectByType<Terrain>());
+        terrain = go != null ? go.GetComponent<Terrain>() : (Terrain.activeTerrain ?? Object.FindAnyObjectByType<Terrain>());
         zoneOk = zone.Bind(ref island, terrain, zoneName);
 
         mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        mat.SetColor("_BaseColor", glow * brightness);
+        mat.SetColor(BaseColorId, glow * brightness);
+        mpb = new MaterialPropertyBlock();
         var sphere = CreateSphereMesh();
         motes = new Transform[count]; seed = new Vector3[count]; anchor = new Vector3[count];
+        period = new float[count]; rends = new Renderer[count];
         for (int i = 0; i < count; i++)
         {
             var m = new GameObject("mote");
             m.transform.SetParent(transform, false);
             m.AddComponent<MeshFilter>().sharedMesh = sphere;
-            m.AddComponent<MeshRenderer>().sharedMaterial = mat;
+            rends[i] = m.AddComponent<MeshRenderer>();
+            rends[i].sharedMaterial = mat;
             seed[i] = new Vector3(Random.value * 1000f, Random.value * 1000f, Random.value * 1000f);
+            period[i] = Random.Range(blinkPeriod.x, blinkPeriod.y);
             motes[i] = m.transform;
             anchor[i] = RandomSpotAround(CamPos());
             m.transform.position = anchor[i];
@@ -73,16 +81,22 @@ public class Fireflies : MonoBehaviour
             Vector2 flat = new Vector2(anchor[i].x - cam.x, anchor[i].z - cam.z);
             if (flat.sqrMagnitude > radius * radius) anchor[i] = RandomSpotAround(cam);
 
-            // bounded wander around the anchor — two sine frequencies per axis so the path meanders (a flitting
-            // little flight) instead of a single repetitive orbit. Time-based, so it's frame-rate independent.
+            // lazy bounded drift around the anchor — two slow sine frequencies per axis so the path meanders
+            // gently instead of orbiting. Time-based, so it's frame-rate independent.
             float ox = Mathf.Sin(t * floatRate + s.x) * floatRadius + Mathf.Sin(t * floatRate * 2.3f + s.z) * floatRadius * 0.35f;
             float oz = Mathf.Cos(t * floatRate * 0.8f + s.z) * floatRadius + Mathf.Cos(t * floatRate * 2.1f + s.x) * floatRadius * 0.35f;
             float oy = (0.5f + 0.5f * Mathf.Sin(t * floatRate * 1.3f + s.y)) * height;   // drifts up and down, 0..height
             float groundY = terrain != null ? terrain.SampleHeight(anchor[i]) + terrain.transform.position.y : cam.y;
             tr.position = new Vector3(anchor[i].x + ox, groundY + 0.2f + oy, anchor[i].z + oz);
 
-            float flick = 0.7f + 0.3f * Mathf.Sin(t * 1.6f + s.x * 13f);   // slow, soft pulse (not a fast twinkle)
-            tr.localScale = Vector3.one * moteSize * flick * night;
+            // the actual firefly blink: dark most of the cycle, then a soft rise-and-fade glow. Each mote has its
+            // own period + phase so they never sync. pulse is 0 outside the lit window, a sine bell inside it.
+            float phase = Mathf.Repeat(t / period[i] + s.y, 1f);
+            float pulse = phase < litFraction ? Mathf.Sin(phase / litFraction * Mathf.PI) : 0f;
+
+            tr.localScale = Vector3.one * moteSize * (0.35f + 0.65f * pulse) * night;
+            mpb.SetColor(BaseColorId, glow * (brightness * Mathf.Max(pulse, 0.04f)));   // faint ember between blinks
+            rends[i].SetPropertyBlock(mpb);
         }
     }
 
@@ -99,14 +113,14 @@ public class Fireflies : MonoBehaviour
     {
         var cam = Camera.main;
         if (cam != null) return cam.transform.position;
-        var pm = Object.FindFirstObjectByType<PlayerMovement>();
+        var pm = Object.FindAnyObjectByType<PlayerMovement>();
         return pm != null ? pm.transform.position : transform.position;
     }
 
     static Light FindSun()
     {
         Light best = null;
-        foreach (var l in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+        foreach (var l in Object.FindObjectsByType<Light>())
             if (l.type == LightType.Directional && l.gameObject.name != "Moonlight" && (best == null || l.intensity > best.intensity)) best = l;
         return best;
     }

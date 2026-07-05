@@ -10,7 +10,7 @@ public static class SetupLighting
     [MenuItem("WildReach/Setup Golden Hour")]
     static void Setup()
     {
-        var light = Object.FindObjectsByType<Light>(FindObjectsSortMode.None)
+        var light = Object.FindObjectsByType<Light>()
             .FirstOrDefault(l => l.type == LightType.Directional);
         if (light == null) { Debug.LogError("[Light] No Directional Light found."); return; }
 

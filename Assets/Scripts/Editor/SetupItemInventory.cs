@@ -14,7 +14,7 @@ public static class SetupItemInventory
     static void Go()
     {
         // no more ground pickups — you start with both weapons; clear any leftover ground sticks
-        foreach (var pk in Object.FindObjectsByType<ItemPickup>(FindObjectsSortMode.None)) Object.DestroyImmediate(pk.gameObject);
+        foreach (var pk in Object.FindObjectsByType<ItemPickup>()) Object.DestroyImmediate(pk.gameObject);
 
         var stickPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Items/Stick/Stick.prefab");
         var torchPrefab = BuildMeshPrefab("Assets/Items/Torch/Torch.fbx", "Assets/Items/Torch/Torch.mat", "Assets/Items/Torch/Torch.prefab", 0.82f);
@@ -22,7 +22,7 @@ public static class SetupItemInventory
         var stickIcon = EnsureSprite(IconDir + "Stick.png");   // icons are pre-rendered (Blender) — just import as Sprite
         var torchIcon = EnsureSprite(IconDir + "Torch.png");
 
-        var move = Object.FindFirstObjectByType<PlayerMovement>();
+        var move = Object.FindAnyObjectByType<PlayerMovement>();
         var wield = move != null ? move.GetComponent<WieldSystem>() : null;
         if (wield == null) { Debug.LogError("[Weapons] No WieldSystem on the player — run 'Setup Stick' first."); return; }
         if (move.GetComponent<SpineAim>() == null) move.gameObject.AddComponent<SpineAim>();   // swing aims at the crosshair height

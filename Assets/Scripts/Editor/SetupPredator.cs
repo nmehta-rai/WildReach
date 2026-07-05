@@ -9,10 +9,10 @@ public static class SetupPredator
     [MenuItem("WildReach/Combat/Setup Predator (placeholder)")]
     static void Setup()
     {
-        var pm = Object.FindFirstObjectByType<PlayerMovement>();
+        var pm = Object.FindAnyObjectByType<PlayerMovement>();
         if (pm == null) { Debug.LogError("[Predator] No PlayerMovement in scene."); return; }
         if (pm.GetComponent<HealthSystem>() == null) pm.gameObject.AddComponent<HealthSystem>();
-        var terrain = Terrain.activeTerrain ?? Object.FindFirstObjectByType<Terrain>();
+        var terrain = Terrain.activeTerrain ?? Object.FindAnyObjectByType<Terrain>();
 
         // respawn point at the player's current spot
         var rp = GameObject.Find("RespawnPoint") ?? new GameObject("RespawnPoint");

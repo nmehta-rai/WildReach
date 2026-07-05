@@ -58,7 +58,7 @@ public static class SetupDayNight
 
     static Light FindSun()
     {
-        foreach (var l in Object.FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (var l in Object.FindObjectsByType<Light>(FindObjectsInactive.Include))
             if (l.type == LightType.Directional && l.gameObject.name != "Moonlight") return l;
         return null;
     }

@@ -19,7 +19,7 @@ public static class SetupWater
     // Centre of the island in X/Z, so the ocean (and the ship) sit on the slice rather than off in the void.
     public static Vector3 IslandCenter()
     {
-        var t = Object.FindObjectOfType<Terrain>();
+        var t = Object.FindAnyObjectByType<Terrain>();
         if (t != null)
         {
             var s = t.terrainData.size;

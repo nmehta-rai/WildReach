@@ -42,10 +42,10 @@ public static class ConvertPlayerToGeneric
 
         // re-point the player's Animator at the new Generic avatar + drop root motion (player code drives position)
         var avatar = AssetDatabase.LoadAllAssetsAtPath(RiggedFbx).OfType<Avatar>().FirstOrDefault();
-        var move = Object.FindFirstObjectByType<PlayerMovement>();
+        var move = Object.FindAnyObjectByType<PlayerMovement>();
         var anim = move != null ? move.GetComponentInChildren<Animator>(true) : null;
         if (anim == null)
-            anim = Object.FindObjectsByType<Animator>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            anim = Object.FindObjectsByType<Animator>(FindObjectsInactive.Include)
                 .FirstOrDefault(a => a.runtimeAnimatorController != null && a.runtimeAnimatorController.name.Contains("Azure"));
 
         if (anim != null)

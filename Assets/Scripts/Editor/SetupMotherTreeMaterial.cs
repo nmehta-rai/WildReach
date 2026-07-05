@@ -41,7 +41,7 @@ public static class SetupMotherTreeMaterial
         // Target: selected object, else one named like the tree.
         var go = Selection.activeGameObject;
         if (go == null)
-            go = Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None)
+            go = Object.FindObjectsByType<MeshRenderer>()
                        .Select(r => r.gameObject)
                        .FirstOrDefault(g => g.name.Contains("Hollowroot"));
         if (go == null) { Debug.LogWarning("[Tree] Material built, but no tree selected/found to assign it to."); }

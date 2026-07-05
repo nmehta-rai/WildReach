@@ -70,7 +70,7 @@ public static class CreatureRepair
 
         // now fix every live scene instance (match by the name before the first '_': "ForestBeetle_Forrest_12" -> "ForestBeetle")
         int sceneFixed = 0;
-        foreach (var fc in Object.FindObjectsByType<FillerCritter>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (var fc in Object.FindObjectsByType<FillerCritter>(FindObjectsInactive.Include))
         {
             var key = fc.gameObject.name.Split('_')[0];
             if (!fixedMat.TryGetValue(key, out var m)) continue;

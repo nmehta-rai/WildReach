@@ -56,7 +56,7 @@ public static class SetupAnimationGallery
         inst.name = "AnimGallery_Azure";
 
         // place it next to the current character if there is one, else origin
-        var others = Object.FindObjectsByType<SkinnedMeshRenderer>(FindObjectsSortMode.None)
+        var others = Object.FindObjectsByType<SkinnedMeshRenderer>()
                            .Where(s => s.transform.root != inst.transform).ToArray();
         Vector3 pos = others.Length > 0 ? others[0].transform.root.position + new Vector3(1.5f, 0, 0) : Vector3.zero;
         inst.transform.position = pos;

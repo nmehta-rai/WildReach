@@ -24,10 +24,10 @@ public class PetFollow : MonoBehaviour
 
     void Start()
     {
-        var pm = Object.FindFirstObjectByType<PlayerMovement>();
+        var pm = Object.FindAnyObjectByType<PlayerMovement>();
         if (pm != null) { player = pm.transform; move = pm; move.Jumped += OnPlayerJump; }
         anim = GetComponentInChildren<Animator>(true);
-        terrain = Terrain.activeTerrain ?? Object.FindFirstObjectByType<Terrain>();
+        terrain = Terrain.activeTerrain ?? Object.FindAnyObjectByType<Terrain>();
         if (anim != null) anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
     }
 

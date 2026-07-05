@@ -114,7 +114,7 @@ public static class SetupLeopardPredator
         if (pred == null)
         {
             pred = new GameObject("Predator");
-            var pm = Object.FindFirstObjectByType<PlayerMovement>();
+            var pm = Object.FindAnyObjectByType<PlayerMovement>();
             if (pm != null) pred.transform.position = pm.transform.position + pm.transform.forward * 60f;
         }
         foreach (var c in new Component[] { pred.GetComponent<MeshFilter>(), pred.GetComponent<MeshRenderer>() })

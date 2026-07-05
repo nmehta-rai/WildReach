@@ -25,7 +25,7 @@ public class ItemPickup : MonoBehaviour
     {
         phase = Random.value * 10f;
         groundPos = transform.position; groundRot = transform.rotation;
-        var pm = Object.FindFirstObjectByType<PlayerMovement>();
+        var pm = Object.FindAnyObjectByType<PlayerMovement>();
         if (pm != null) player = pm.transform;
     }
 

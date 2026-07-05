@@ -57,8 +57,8 @@ public class Predator : MonoBehaviour
 
         home = transform.position;
         anim = GetComponentInChildren<Animator>();
-        terrain = Terrain.activeTerrain ?? FindFirstObjectByType<Terrain>();
-        var pm = FindFirstObjectByType<PlayerMovement>();
+        terrain = Terrain.activeTerrain ?? FindAnyObjectByType<Terrain>();
+        var pm = FindAnyObjectByType<PlayerMovement>();
         if (pm != null)
         {
             player = pm.transform;

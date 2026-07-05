@@ -25,7 +25,7 @@ public class FillerCritter : MonoBehaviour
     {
         home = transform.position;
         var go = !string.IsNullOrEmpty(terrainName) ? GameObject.Find(terrainName) : null;
-        terrain = go != null ? go.GetComponent<Terrain>() : (Terrain.activeTerrain ?? Object.FindFirstObjectByType<Terrain>());
+        terrain = go != null ? go.GetComponent<Terrain>() : (Terrain.activeTerrain ?? Object.FindAnyObjectByType<Terrain>());
         zoneOk = zone.Bind(ref island, terrain, zoneName);
         phase  = home.x * 7.13f + home.z * 3.7f;   // per-spot phase so they don't bob in lockstep
         Pick();

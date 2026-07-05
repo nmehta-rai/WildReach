@@ -34,7 +34,7 @@ public class GrassField : MonoBehaviour
     public void Refresh()
     {
         var go = !string.IsNullOrEmpty(terrainName) ? GameObject.Find(terrainName) : null;
-        terrain = go != null ? go.GetComponent<Terrain>() : (Terrain.activeTerrain ?? FindFirstObjectByType<Terrain>());
+        terrain = go != null ? go.GetComponent<Terrain>() : (Terrain.activeTerrain ?? FindAnyObjectByType<Terrain>());
         zonePixels = zoneMap != null ? zoneMap.GetPixels32() : null;
         zoneRes = zoneMap != null ? zoneMap.width : 0;
         if (material != null) material.enableInstancing = true;

@@ -48,7 +48,7 @@ public class RespawnController : MonoBehaviour
         if (respawnPoint != null) transform.position = respawnPoint.position;
         if (rb != null) rb.linearVelocity = Vector3.zero;
         while (hp.Hearts < hp.MaxHearts) hp.Heal();   // full heal
-        foreach (var p in FindObjectsByType<Predator>(FindObjectsSortMode.None)) p.GoHome();   // send mobs back to their lairs
+        foreach (var p in FindObjectsByType<Predator>()) p.GoHome();   // send mobs back to their lairs
     }
 
     IEnumerator Fade(float a, float b)

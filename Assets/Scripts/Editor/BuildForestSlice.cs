@@ -32,11 +32,11 @@ public static class BuildForestSlice
     [MenuItem("WildReach/Build Forest Slice")]
     static void Build()
     {
-        var terrain = Terrain.activeTerrain ?? Object.FindFirstObjectByType<Terrain>();
+        var terrain = Terrain.activeTerrain ?? Object.FindAnyObjectByType<Terrain>();
         if (terrain == null) { Debug.LogError("[ForestSlice] No terrain in the scene."); return; }
         var td = terrain.terrainData; var tpos = terrain.transform.position;
 
-        var player = Object.FindFirstObjectByType<PlayerMovement>();
+        var player = Object.FindAnyObjectByType<PlayerMovement>();
         var hero   = GameObject.Find("HomeTree");
         Vector3 center = player ? player.transform.position : (hero ? hero.transform.position : Vector3.zero);
         Vector3 heroPos = hero ? hero.transform.position : new Vector3(1e9f, 0, 1e9f);

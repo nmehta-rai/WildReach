@@ -22,7 +22,7 @@ public static class SetupCombat
         }
 
         int scene = 0;
-        foreach (var mb in Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+        foreach (var mb in Object.FindObjectsByType<MonoBehaviour>())
             if (mb is Predator || mb is ZoneRoamer || mb is CreatureWander)
                 if (EnsureKit(mb.gameObject, mb.gameObject.name)) { EditorUtility.SetDirty(mb.gameObject); scene++; }
 

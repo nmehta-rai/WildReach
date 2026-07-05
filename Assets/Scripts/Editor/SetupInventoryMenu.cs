@@ -73,7 +73,7 @@ public static class SetupInventoryMenu
 
     static void EnsureEventSystem()
     {
-        if (Object.FindFirstObjectByType<EventSystem>() == null)
+        if (Object.FindAnyObjectByType<EventSystem>() == null)
             new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
     }
 
@@ -93,7 +93,7 @@ public static class SetupInventoryMenu
 
     static Canvas EnsureCanvas()
     {
-        var canvas = Object.FindFirstObjectByType<Canvas>();
+        var canvas = Object.FindAnyObjectByType<Canvas>();
         if (canvas == null)
         {
             var go = new GameObject("HUD Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));

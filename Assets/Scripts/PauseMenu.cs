@@ -16,8 +16,8 @@ public class PauseMenu : MonoBehaviour
     void Start()
     {
         if (!Application.isPlaying) return;
-        move    = Object.FindFirstObjectByType<PlayerMovement>();
-        respawn = Object.FindFirstObjectByType<RespawnController>();
+        move    = Object.FindAnyObjectByType<PlayerMovement>();
+        respawn = Object.FindAnyObjectByType<RespawnController>();
         font    = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
         EnsureEventSystem();
         Build();
@@ -126,7 +126,7 @@ public class PauseMenu : MonoBehaviour
 
     void EnsureEventSystem()
     {
-        if (Object.FindFirstObjectByType<EventSystem>() != null) return;
+        if (Object.FindAnyObjectByType<EventSystem>() != null) return;
         var es = new GameObject("EventSystem");
         es.AddComponent<EventSystem>();
         es.AddComponent<StandaloneInputModule>();

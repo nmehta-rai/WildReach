@@ -44,6 +44,64 @@ public static class PlaceClimbingTrees
         Debug.Log($"[ClimbTrees] {root.transform.childCount} giants, {bare} bare. If bare>0, those instances lost their canopy mesh (re-run Place; if it persists the prefab's canopy mesh asset is missing).");
     }
 
+    // Re-seat the ALREADY-PLACED giants where they stand (no re-roll of positions) — for when the seating
+    // logic improves, like the slope-footprint fix. Handles BOTH homes the sentinels can live in:
+    // real GameObjects under a ClimbingTrees root, AND baked instance matrices inside ScatterField groups
+    // (where they actually are since the palette drop — the group data survives with the old seating).
+    [MenuItem("WildReach/World/Reseat Climbing Trees")]
+    static void Reseat()
+    {
+        var def = AssetDatabase.LoadAssetAtPath<IslandDefinition>(IslandPath);
+        var terrain = (def != null ? GameObject.Find(def.terrainName)?.GetComponent<Terrain>() : null) ?? Terrain.activeTerrain;
+        if (terrain == null) { Debug.LogError("[ClimbTrees] No terrain."); return; }
+
+        int moved = 0;
+
+        // 1) real placed GameObjects, if any
+        var root = GameObject.Find("ClimbingTrees_" + (def != null ? def.name : "Island1"));
+        if (root != null)
+            foreach (Transform tr in root.transform)
+            {
+                float oldY = tr.position.y;
+                Seat(tr.gameObject, terrain, tr.position);
+                if (Mathf.Abs(tr.position.y - oldY) > 0.01f) moved++;
+                Debug.Log($"[ClimbTrees] {tr.name}: y {oldY:F2} -> {tr.position.y:F2} (moved {tr.position.y - oldY:+0.00;-0.00}m)");
+            }
+
+        // 2) instanced sentinels baked into ScatterField groups
+        foreach (var sf in Object.FindObjectsByType<ScatterField>(FindObjectsInactive.Include))
+        {
+            if (sf.groups == null) continue;
+            bool dirty = false;
+            foreach (var g in sf.groups)
+            {
+                if (g == null || g.mesh == null || g.instances == null || !g.name.Contains("AncientSentinel")) continue;
+                var mb = g.mesh.bounds;   // combined mesh, unit scale; instance rotation is yaw-only so Y maths hold
+                for (int i = 0; i < g.instances.Length; i++)
+                {
+                    var m = g.instances[i];
+                    var pos = new Vector3(m.m03, m.m13, m.m23);
+                    float sc = (g.scales != null && i < g.scales.Length) ? g.scales[i] : 1f;
+                    float footprint = Mathf.Clamp(Mathf.Max(mb.size.x, mb.size.z) * sc * 0.25f, 2.5f, 9f);
+                    float gy = GroundMinY(terrain, pos, footprint);
+                    float newY = gy - mb.min.y * sc - Sink;
+                    if (Mathf.Abs(newY - pos.y) < 0.01f) continue;
+                    Debug.Log($"[ClimbTrees] {g.name}[{i}]: y {pos.y:F2} -> {newY:F2} (moved {newY - pos.y:+0.00;-0.00}m)");
+                    m.m13 = newY; g.instances[i] = m;
+                    pos.y = newY; g.positions[i] = pos;
+                    dirty = true; moved++;
+                }
+            }
+            if (dirty)
+            {
+                EditorUtility.SetDirty(sf);
+                UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(sf.gameObject.scene);
+            }
+        }
+
+        Debug.Log($"[ClimbTrees] Reseat complete — {moved} giant(s) moved (footprint-lowest seating). Save the scene to keep it.");
+    }
+
     [MenuItem("WildReach/World/Place Climbing Trees in Forest")]
     static void Place()
     {
@@ -100,12 +158,7 @@ public static class PlaceClimbingTrees
             inst.transform.localScale *= s;
             inst.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
 
-            // Seat from the TRUNK's base, NOT the full bounds — the canopy renderers (and a bare tree's null-mesh
-            // leaf renderer, whose bounds sit at world origin) drag min.y down and float the whole tree up.
-            float trunkMinY = TrunkBaseY(inst, b.min.y);
-            float gy = terrain.SampleHeight(c) + tpos.y;
-            float baseOffset = trunkMinY - inst.transform.position.y;
-            inst.transform.position = new Vector3(c.x, gy - baseOffset - Sink, c.z);
+            Seat(inst, terrain, c);
             inst.name = prefab.name + "_" + (made + 1);
 
             if (made < 4)   // instrument the first few so we can see what's actually happening
@@ -113,7 +166,7 @@ public static class PlaceClimbingTrees
                 int leafOk = 0, leafTot = 0;
                 var cn = inst.transform.Find("Canopy");
                 if (cn != null) foreach (var mf in cn.GetComponentsInChildren<MeshFilter>(true)) { leafTot++; if (mf.sharedMesh != null) leafOk++; }
-                Debug.Log($"[ClimbTrees] {inst.name}: gy={gy:F2} trunkBase={trunkMinY:F2} scale={inst.transform.localScale.x:F2} finalBaseY={(inst.transform.position.y + baseOffset):F2} leaves={leafOk}/{leafTot}");
+                Debug.Log($"[ClimbTrees] {inst.name}: y={inst.transform.position.y:F2} scale={inst.transform.localScale.x:F2} leaves={leafOk}/{leafTot}");
             }
             placed.Add(c);
             made++;
@@ -124,13 +177,40 @@ public static class PlaceClimbingTrees
                   "Now re-Scatter the Forrest zone ONCE to clear any old floating instanced trees.");
     }
 
-    // The trunk's lowest world Y. The trunk is the renderer(s) that carry the MeshCollider (the canopy has none);
-    // seating off this ignores leaves + any bare-tree null-mesh renderer so the trunk base sits on the ground.
-    static float TrunkBaseY(GameObject go, float fallback)
+    // Seat the tree: trunk base on the LOWEST ground across its footprint. A single center height sample seats
+    // the trunk at mid-slope on a hillside and leaves the downhill half of the root flare hanging in the air —
+    // same lesson as ScatterField's `footprint` fix. Better a buried uphill root than a floating downhill one.
+    static void Seat(GameObject inst, Terrain terrain, Vector3 c)
+    {
+        float trunkMinY = TrunkBase(inst, out float footprint);
+        float gy = GroundMinY(terrain, c, footprint);
+        float baseOffset = trunkMinY - inst.transform.position.y;
+        inst.transform.position = new Vector3(c.x, gy - baseOffset - Sink, c.z);
+    }
+
+    // Lowest terrain height at the center + a ring of samples across the footprint radius.
+    static float GroundMinY(Terrain t, Vector3 c, float radius)
+    {
+        float tpy = t.transform.position.y;
+        float min = t.SampleHeight(c) + tpy;
+        for (int i = 0; i < 8; i++)
+        {
+            float a = i * Mathf.PI * 2f / 8f;
+            var p = new Vector3(c.x + Mathf.Cos(a) * radius, 0f, c.z + Mathf.Sin(a) * radius);
+            min = Mathf.Min(min, t.SampleHeight(p) + tpy);
+        }
+        return min;
+    }
+
+    // The trunk's lowest world Y + its footprint radius (world XZ half-extent of the root flare). The trunk is
+    // the renderer(s) that carry the MeshCollider (the canopy has none); measuring off this ignores leaves + any
+    // bare-tree null-mesh renderer so the trunk base sits on the ground.
+    static float TrunkBase(GameObject go, out float footprint)
     {
         // transform the trunk mesh's LOCAL bounds corners by its world matrix (always current — no reliance on
         // Renderer.bounds, which can lag a frame behind a transform change in the editor and float the tree).
-        float min = float.MaxValue;
+        float minY = float.MaxValue;
+        float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
         foreach (var mf in go.GetComponentsInChildren<MeshFilter>())
         {
             if (mf.GetComponent<MeshCollider>() == null || mf.sharedMesh == null) continue;   // trunk = has a collider
@@ -141,10 +221,16 @@ public static class PlaceClimbingTrees
                     (i & 1) == 0 ? -b.extents.x : b.extents.x,
                     (i & 2) == 0 ? -b.extents.y : b.extents.y,
                     (i & 4) == 0 ? -b.extents.z : b.extents.z);
-                min = Mathf.Min(min, m.MultiplyPoint3x4(corner).y);
+                var w = m.MultiplyPoint3x4(corner);
+                minY = Mathf.Min(minY, w.y);
+                minX = Mathf.Min(minX, w.x); maxX = Mathf.Max(maxX, w.x);
+                minZ = Mathf.Min(minZ, w.z); maxZ = Mathf.Max(maxZ, w.z);
             }
         }
-        return min < float.MaxValue ? min : fallback;
+        if (minY == float.MaxValue) { footprint = 4f; return Bounds(go).min.y; }
+        // trunk bounds include high branches, which overstate the base flare — half the extent, kept sane
+        footprint = Mathf.Clamp(Mathf.Max(maxX - minX, maxZ - minZ) * 0.25f, 2.5f, 9f);
+        return minY;
     }
 
     static Bounds Bounds(GameObject go)

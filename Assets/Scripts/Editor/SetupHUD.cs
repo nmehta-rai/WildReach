@@ -31,10 +31,10 @@ public static class SetupHUD
         Kill(canvas.transform.Find("InventoryHUD"));
         Kill(canvas.transform.Find("StaminaRing"));
         Kill(canvas.transform.Find("Vitals"));
-        foreach (var old in Object.FindObjectsByType<StaminaUI>(FindObjectsSortMode.None)) Object.DestroyImmediate(old);
+        foreach (var old in Object.FindObjectsByType<StaminaUI>()) Object.DestroyImmediate(old);
 
         // --- systems ---
-        var stamSys = Object.FindFirstObjectByType<StaminaSystem>();
+        var stamSys = Object.FindAnyObjectByType<StaminaSystem>();
         var healthHost = stamSys != null ? stamSys.gameObject : canvas.gameObject;
         var health = healthHost.GetComponent<HealthSystem>() ?? healthHost.AddComponent<HealthSystem>();
 
@@ -147,7 +147,7 @@ public static class SetupHUD
 
     static Canvas EnsureCanvas()
     {
-        var canvas = Object.FindFirstObjectByType<Canvas>();
+        var canvas = Object.FindAnyObjectByType<Canvas>();
         if (canvas == null)
         {
             var go = new GameObject("HUD Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));

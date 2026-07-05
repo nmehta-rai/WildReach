@@ -33,7 +33,7 @@ public static class RebuildTreeColliders
     static List<GameObject> AutoFindTrees()
     {
         var roots = new HashSet<GameObject>();
-        foreach (var mf in Object.FindObjectsByType<MeshFilter>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+        foreach (var mf in Object.FindObjectsByType<MeshFilter>(FindObjectsInactive.Exclude))
         {
             if (mf.sharedMesh == null) continue;
             string nm = mf.name.ToLower();

@@ -37,7 +37,7 @@ public static class FillForestGrass
     static void Fill()
     {
         // EVERY terrain in the scene (covers the case where the rendered terrain isn't activeTerrain)
-        var terrains = Object.FindObjectsByType<Terrain>(FindObjectsSortMode.None);
+        var terrains = Object.FindObjectsByType<Terrain>();
         if (terrains.Length == 0) { Debug.LogError("[Grass] No terrain in the scene."); return; }
         Debug.Log($"[Grass] Found {terrains.Length} terrain(s): {string.Join(", ", terrains.Select(t => t.name))}");
         foreach (var terrain in terrains) FillOne(terrain);

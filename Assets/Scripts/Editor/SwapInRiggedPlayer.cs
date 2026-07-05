@@ -48,7 +48,7 @@ public static class SwapInRiggedPlayer
         if (layers.Length > 0 && !layers[0].iKPass) { layers[0].iKPass = true; ctrl.layers = layers; EditorUtility.SetDirty(ctrl); AssetDatabase.SaveAssets(); }
 
         // --- 3. find the Player ---
-        var movement = Object.FindFirstObjectByType<PlayerMovement>();
+        var movement = Object.FindAnyObjectByType<PlayerMovement>();
         if (movement == null) { Debug.LogError("[RiggedSwap] No PlayerMovement in scene."); return; }
         var player = movement.gameObject;
 

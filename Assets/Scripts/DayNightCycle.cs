@@ -52,7 +52,7 @@ public class DayNightCycle : MonoBehaviour
         if (sun != null) return;
         sun = GetComponent<Light>();
         if (sun != null && sun.type == LightType.Directional) return;
-        foreach (var l in FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (var l in FindObjectsByType<Light>(FindObjectsInactive.Include))
             if (l.type == LightType.Directional) { sun = l; return; }
     }
 

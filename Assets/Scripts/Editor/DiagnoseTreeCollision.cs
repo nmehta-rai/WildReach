@@ -10,7 +10,7 @@ public static class DiagnoseTreeCollision
     {
         Debug.Log("===== [DIAG] TREE COLLISION =====");
 
-        var pm = Object.FindFirstObjectByType<PlayerMovement>();
+        var pm = Object.FindAnyObjectByType<PlayerMovement>();
         if (pm == null) Debug.Log("[DIAG] No PlayerMovement found!");
         else
         {

@@ -126,7 +126,7 @@ public static class BuildGrassClumps
 
         var sv = SceneView.lastActiveSceneView;
         Vector3 center = sv != null ? sv.camera.transform.position + sv.camera.transform.forward * 10f : Vector3.zero;
-        var terrain = Terrain.activeTerrain ?? Object.FindFirstObjectByType<Terrain>();
+        var terrain = Terrain.activeTerrain ?? Object.FindAnyObjectByType<Terrain>();
 
         Random.InitState(7);
         int n = 0;

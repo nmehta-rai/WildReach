@@ -18,7 +18,7 @@ public static class SetupClimbIK
         if (!layers[0].iKPass) { layers[0].iKPass = true; ctrl.layers = layers; EditorUtility.SetDirty(ctrl); AssetDatabase.SaveAssets(); }
 
         // 2. add ClimbIK to the player's Animator GameObject
-        var pm = Object.FindObjectOfType<PlayerMovement>();
+        var pm = Object.FindAnyObjectByType<PlayerMovement>();
         if (pm == null) { Debug.LogError("[ClimbIK] No PlayerMovement in the scene."); return; }
         var animator = pm.GetComponentInChildren<Animator>();
         if (animator == null) { Debug.LogError("[ClimbIK] No Animator under the player."); return; }

@@ -12,14 +12,14 @@ public static class SetupSailing
     [MenuItem("WildReach/Setup Sailing")]
     static void Setup()
     {
-        var pm = Object.FindObjectOfType<PlayerMovement>();
+        var pm = Object.FindAnyObjectByType<PlayerMovement>();
         if (pm == null) { Debug.LogError("[Sailing] No PlayerMovement in the scene — can't find the player."); return; }
         var player = pm.gameObject;
 
         var ship = GameObject.Find("Ship");
         if (ship == null) { Debug.LogError("[Sailing] No 'Ship' in the scene — run Setup Ship first."); return; }
 
-        var cam = Object.FindObjectOfType<CameraFollow>();
+        var cam = Object.FindAnyObjectByType<CameraFollow>();
 
         // Use the ACTUAL water surface Y, not the constant — the Water object may have been moved,
         // and a mismatch is what makes the swimmer float at the wrong height.

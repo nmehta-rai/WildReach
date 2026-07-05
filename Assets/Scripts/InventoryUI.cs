@@ -15,7 +15,7 @@ public class InventoryUI : MonoBehaviour
     void Bind()
     {
         if (wield != null) return;
-        var pm = Object.FindFirstObjectByType<PlayerMovement>();
+        var pm = Object.FindAnyObjectByType<PlayerMovement>();
         if (pm != null) wield = pm.GetComponent<WieldSystem>();
     }
 

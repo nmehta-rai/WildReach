@@ -14,7 +14,7 @@ public static class ResetFlatTerrain
     static void Reset()
     {
         // Remove existing terrains from the scene.
-        foreach (var t in Object.FindObjectsByType<Terrain>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        foreach (var t in Object.FindObjectsByType<Terrain>(FindObjectsInactive.Include))
             Object.DestroyImmediate(t.gameObject);
 
         // Fresh flat terrain data (heights default to 0 == flat).

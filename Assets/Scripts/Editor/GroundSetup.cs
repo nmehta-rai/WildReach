@@ -37,7 +37,7 @@ public static class GroundSetup
             built.Add(layer);
         }
 
-        var terrain = Terrain.activeTerrain ?? Object.FindFirstObjectByType<Terrain>();
+        var terrain = Terrain.activeTerrain ?? Object.FindAnyObjectByType<Terrain>();
         if (terrain == null || terrain.terrainData == null)
         { Debug.LogError("[Ground] No terrain found. Run Reset Flat Terrain first."); return; }
 

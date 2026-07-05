@@ -37,7 +37,7 @@ public static class SetupGenericPlayer
         var material = BuildMaterial();
 
         // --- 2. swap into the Player object ---
-        var movement = Object.FindFirstObjectByType<PlayerMovement>();
+        var movement = Object.FindAnyObjectByType<PlayerMovement>();
         if (movement == null) { Debug.LogError("[GenPlayer] No PlayerMovement in scene — open SampleScene."); return; }
         var player = movement.gameObject;
 

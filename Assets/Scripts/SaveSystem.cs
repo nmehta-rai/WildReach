@@ -14,9 +14,9 @@ public class SaveSystem : MonoBehaviour
 
     void Start()
     {
-        var move = Object.FindFirstObjectByType<PlayerMovement>();
+        var move = Object.FindAnyObjectByType<PlayerMovement>();
         if (move != null) { player = move.transform; rb = move.GetComponent<Rigidbody>(); }
-        dnc = Object.FindFirstObjectByType<DayNightCycle>();
+        dnc = Object.FindAnyObjectByType<DayNightCycle>();
         Load();
     }
 

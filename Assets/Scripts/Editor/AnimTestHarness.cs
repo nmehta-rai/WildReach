@@ -52,9 +52,9 @@ public static class AnimTestHarness
 
     static Animator HumanoidAnimator()
     {
-        return Object.FindObjectsByType<Animator>(FindObjectsSortMode.None)
+        return Object.FindObjectsByType<Animator>()
             .FirstOrDefault(a => a.avatar != null && a.avatar.isHuman)
-            ?? Object.FindFirstObjectByType<Animator>();
+            ?? Object.FindAnyObjectByType<Animator>();
     }
 
     static AnimationClip SelectedClip()

@@ -10,7 +10,7 @@ public static class SetupPost
     [MenuItem("WildReach/Setup Cinematic Post")]
     static void Setup()
     {
-        var vol = Object.FindObjectsByType<Volume>(FindObjectsSortMode.None)
+        var vol = Object.FindObjectsByType<Volume>()
             .OrderByDescending(v => v.isGlobal).FirstOrDefault();
         if (vol == null) { Debug.LogError("[Post] No Volume in scene (need a Global Volume)."); return; }
 

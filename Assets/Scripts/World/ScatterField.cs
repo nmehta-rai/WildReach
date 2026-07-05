@@ -69,7 +69,7 @@ public class ScatterField : MonoBehaviour
     void Update()
     {
         if (groups == null) return;
-        if (player == null) { var pm = FindFirstObjectByType<PlayerMovement>(); player = pm != null ? pm.transform : null; }
+        if (player == null) { var pm = FindAnyObjectByType<PlayerMovement>(); player = pm != null ? pm.transform : null; }
         if (player == null) return;
 
         if (colRoot == null) { var go = new GameObject("~Colliders") { hideFlags = HideFlags.DontSave }; colRoot = go.transform; }   // top-level = world-identity, so instance world matrices apply cleanly

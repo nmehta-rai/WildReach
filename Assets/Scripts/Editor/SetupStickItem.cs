@@ -57,7 +57,7 @@ public static class SetupStickItem
         Object.DestroyImmediate(root);
 
         // 3. wire the player
-        var move = Object.FindFirstObjectByType<PlayerMovement>();
+        var move = Object.FindAnyObjectByType<PlayerMovement>();
         if (move == null) { Debug.LogError("[Stick] No player in scene."); return; }
         var player = move.gameObject;
         var wield = player.GetComponent<WieldSystem>() ?? player.AddComponent<WieldSystem>();
@@ -80,7 +80,7 @@ public static class SetupStickItem
         if (player.GetComponentInChildren<CrosshairUI>() == null) player.AddComponent<CrosshairUI>();
 
         // 4. drop a stick on the ground in front of the player — clear any existing ground sticks first (no dupes)
-        foreach (var oldPk in Object.FindObjectsByType<ItemPickup>(FindObjectsSortMode.None))
+        foreach (var oldPk in Object.FindObjectsByType<ItemPickup>())
             Object.DestroyImmediate(oldPk.gameObject);
         var inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
         Vector3 p = player.transform.position + player.transform.forward * 2f + Vector3.up * 2f;
@@ -183,7 +183,7 @@ public static class SetupStickItem
                 if (st.state.name == "Pickup") { st.state.speed = 1.55f; EditorUtility.SetDirty(ctrl); }
             AssetDatabase.SaveAssets();
         }
-        var move = Object.FindFirstObjectByType<PlayerMovement>();
+        var move = Object.FindAnyObjectByType<PlayerMovement>();
         var wield = move != null ? move.GetComponent<WieldSystem>() : null;
         if (wield != null)
         {

@@ -40,7 +40,7 @@ public class Stars : MonoBehaviour
     static Light FindSun()
     {
         Light best = null;
-        foreach (var l in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+        foreach (var l in Object.FindObjectsByType<Light>())
             if (l.type == LightType.Directional && l.gameObject.name != "Moonlight" && (best == null || l.intensity > best.intensity))
                 best = l;
         return best;

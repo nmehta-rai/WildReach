@@ -52,7 +52,7 @@ public static class SetupAzurePlayer
         var ctrl = BuildController();
         var material = BuildMaterial();
 
-        var move = Object.FindFirstObjectByType<PlayerMovement>();
+        var move = Object.FindAnyObjectByType<PlayerMovement>();
         if (move == null) { Debug.LogError("[Azure] No PlayerMovement in scene."); return; }
         var player = move.gameObject;
 

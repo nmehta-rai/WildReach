@@ -17,7 +17,7 @@ public static class BlendForestGrass
     [MenuItem("WildReach/World/Blend Grass Into Forest Ground")]
     static void Blend()
     {
-        var terrain = Terrain.activeTerrain ?? Object.FindFirstObjectByType<Terrain>();
+        var terrain = Terrain.activeTerrain ?? Object.FindAnyObjectByType<Terrain>();
         if (terrain == null || terrain.terrainData == null) { Debug.LogError("[GroundGrass] No terrain."); return; }
         var td = terrain.terrainData;
 

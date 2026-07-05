@@ -38,7 +38,7 @@ public static class AddTreeCollider
             foreach (var go in sel) cols.AddRange(go.GetComponentsInChildren<MeshCollider>(true));
         else
         {
-            cols.AddRange(Object.FindObjectsByType<MeshCollider>(FindObjectsInactive.Include, FindObjectsSortMode.None));
+            cols.AddRange(Object.FindObjectsByType<MeshCollider>(FindObjectsInactive.Include));
             Debug.Log($"[Tree] Nothing selected — scanning the whole scene ({cols.Count} mesh colliders).");
         }
 

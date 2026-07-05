@@ -44,7 +44,7 @@ public static class GrassDetailSetup
             };
         }
 
-        var terrain = Terrain.activeTerrain ?? Object.FindFirstObjectByType<Terrain>();
+        var terrain = Terrain.activeTerrain ?? Object.FindAnyObjectByType<Terrain>();
         if (terrain == null || terrain.terrainData == null)
         { Debug.LogError("[Grass] No terrain found. Run Reset Flat Terrain first."); return; }
 

@@ -33,7 +33,7 @@ public class ZoneRoamer : MonoBehaviour
         home = transform.position;
         anim = GetComponentInChildren<Animator>();
         var go = !string.IsNullOrEmpty(terrainName) ? GameObject.Find(terrainName) : null;
-        terrain = go != null ? go.GetComponent<Terrain>() : (Terrain.activeTerrain ?? Object.FindFirstObjectByType<Terrain>());
+        terrain = go != null ? go.GetComponent<Terrain>() : (Terrain.activeTerrain ?? Object.FindAnyObjectByType<Terrain>());
         if (!zone.Bind(ref island, terrain, zoneName))
             Debug.LogWarning($"[ZoneRoamer] '{name}' couldn't bind zone '{zoneName}' — it'll wander a {roamRadius}m radius of its spawn instead.");
         Pick();

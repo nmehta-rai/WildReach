@@ -16,7 +16,7 @@ public static class SaveTreePrefab
 
         // Loose canopy clusters sitting at scene root.
         string[] accentPrefixes = { "Canopy", "Blossoms", "Wisps" };
-        var canopies = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None)
+        var canopies = Object.FindObjectsByType<GameObject>()
             .Where(g => g.transform.parent == null && accentPrefixes.Any(p => g.name.StartsWith(p)))
             .ToArray();
 
