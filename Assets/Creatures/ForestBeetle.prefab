@@ -12,6 +12,10 @@ GameObject:
   - component: {fileID: 3783742960772411110}
   - component: {fileID: 1397938209314937388}
   - component: {fileID: 5776181243814881411}
+  - component: {fileID: 832226190369821727}
+  - component: {fileID: 7633175962914981195}
+  - component: {fileID: 9201136504866178787}
+  - component: {fileID: 2687210890212537174}
   m_Layer: 0
   m_Name: ForestBeetle
   m_TagString: Untagged
@@ -113,3 +117,67 @@ MonoBehaviour:
   bobSpeed: 5
   hopChance: 0.004
   hopHeight: 0.25
+--- !u!114 &832226190369821727
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 605317525815049209}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32b12d9c44548486aaf68b0c45abffc8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HealthSystem
+  maxHearts: 2
+--- !u!114 &7633175962914981195
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 605317525815049209}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bab98f0e7884447c6bd3b482b9709f2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MobHurt
+  flashTime: 0.25
+  hitTint: {r: 1, g: 0.25, b: 0.2, a: 1}
+  knockback: 10
+  knockTime: 0.25
+--- !u!114 &9201136504866178787
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 605317525815049209}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43f2b2e68e4224bcf8c7c02fc71f89ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MobDeath
+  settle: 1.2
+  sinkTime: 0.8
+--- !u!135 &2687210890212537174
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 605317525815049209}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.00147516
+  m_Center: {x: 0.0000057849684, y: 0.0005, z: -0.000010000018}

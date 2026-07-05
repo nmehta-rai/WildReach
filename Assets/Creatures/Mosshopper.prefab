@@ -12,6 +12,10 @@ GameObject:
   - component: {fileID: 271955356507544266}
   - component: {fileID: 2603884041358110208}
   - component: {fileID: 3533613208103548930}
+  - component: {fileID: 5682532838880279777}
+  - component: {fileID: 1135801814330886003}
+  - component: {fileID: 6003897834509196218}
+  - component: {fileID: 2671590634495413214}
   m_Layer: 0
   m_Name: Mosshopper
   m_TagString: Untagged
@@ -113,3 +117,67 @@ MonoBehaviour:
   bobSpeed: 5
   hopChance: 0.004
   hopHeight: 0.25
+--- !u!114 &5682532838880279777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4549241237384384469}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32b12d9c44548486aaf68b0c45abffc8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HealthSystem
+  maxHearts: 2
+--- !u!114 &1135801814330886003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4549241237384384469}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bab98f0e7884447c6bd3b482b9709f2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MobHurt
+  flashTime: 0.25
+  hitTint: {r: 1, g: 0.25, b: 0.2, a: 1}
+  knockback: 10
+  knockTime: 0.25
+--- !u!114 &6003897834509196218
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4549241237384384469}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43f2b2e68e4224bcf8c7c02fc71f89ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MobDeath
+  settle: 1.2
+  sinkTime: 0.8
+--- !u!135 &2671590634495413214
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4549241237384384469}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.0010160651
+  m_Center: {x: 0.0000014149991, y: 0.00059999997, z: -0.000001634995}

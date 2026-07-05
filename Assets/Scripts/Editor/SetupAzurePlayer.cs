@@ -102,6 +102,7 @@ public static class SetupAzurePlayer
         var climbUp = Clip("ClimbUp"); var climbDown = Clip("ClimbDown");
         var shimmyL = Clip("ShimmyL"); var shimmyR = Clip("ShimmyR");
         var swim = Clip("Swim"); var tread = Clip("Tread");
+        var pickup = Clip("Pickup"); var draw = Clip("Draw"); var sheathe = Clip("Sheathe"); var swing = Clip("Swing");
 
         if (File.Exists(CtrlPath)) AssetDatabase.DeleteAsset(CtrlPath);
         var ctrl = AnimatorController.CreateAnimatorControllerAtPath(CtrlPath);
@@ -112,7 +113,9 @@ public static class SetupAzurePlayer
             ("IsClimbing", AnimatorControllerParameterType.Bool), ("ClimbDir", AnimatorControllerParameterType.Float),
             ("ClimbMag", AnimatorControllerParameterType.Float), ("ClimbStrafe", AnimatorControllerParameterType.Float),
             ("IsSwimming", AnimatorControllerParameterType.Bool),
-            ("SwimSpeed", AnimatorControllerParameterType.Float) })
+            ("SwimSpeed", AnimatorControllerParameterType.Float),
+            ("Pickup", AnimatorControllerParameterType.Trigger), ("Draw", AnimatorControllerParameterType.Trigger),
+            ("Sheathe", AnimatorControllerParameterType.Trigger), ("Swing", AnimatorControllerParameterType.Trigger) })
             ctrl.AddParameter(n, t);
         var sm = ctrl.layers[0].stateMachine;
 
@@ -200,8 +203,20 @@ public static class SetupAzurePlayer
             outS.hasExitTime = false; outS.duration = 0.12f;
         }
 
+        // One-shot wield actions: each fires from its trigger and returns to locomotion. The WieldSystem drives
+        // the triggers and re-parents the held item mid-clip so it matches the hand reaching the ground/back.
+        void OneShot(string trig, AnimationClip clip)
+        {
+            if (!clip) return;
+            var s = sm.AddState(trig); s.motion = clip;
+            var to = sm.AddAnyStateTransition(s); to.AddCondition(AnimatorConditionMode.If, 0, trig);
+            to.duration = 0.07f; to.canTransitionToSelf = false;
+            var outt = s.AddTransition(loco); outt.hasExitTime = true; outt.exitTime = 0.85f; outt.duration = 0.12f;
+        }
+        OneShot("Pickup", pickup); OneShot("Draw", draw); OneShot("Sheathe", sheathe); OneShot("Swing", swing);
+
         EditorUtility.SetDirty(ctrl); AssetDatabase.SaveAssets();
-        Debug.Log($"[Azure] Controller built (idle/walk/run + jump/climb/swim where clips exist).");
+        Debug.Log($"[Azure] Controller built (locomotion + jump/climb/swim + pickup/draw/sheathe/swing where clips exist).");
         return ctrl;
     }
 

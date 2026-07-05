@@ -5,6 +5,7 @@ public class CameraFollow : MonoBehaviour
     [SerializeField] Transform target;
     [SerializeField] float distance = 5f;
     [SerializeField] float heightOffset = 1.6f;
+    [SerializeField] float shoulderOffset = 0.55f;   // over-the-shoulder: shifts the view right so the center crosshair clears the player
     [SerializeField] float sensitivity = 3f;
     [SerializeField] float collisionRadius = 0.3f;   // camera "ball" size for collision
     [SerializeField] float minDistance = 1f;         // never pull closer than this
@@ -42,8 +43,8 @@ public class CameraFollow : MonoBehaviour
         Vector3 rawPivot = target.position + Vector3.up * heightOffset;
         if (!pivotInit) { smoothPivotY = rawPivot.y; pivotInit = true; }
         smoothPivotY = Mathf.SmoothDamp(smoothPivotY, rawPivot.y, ref pivotYVel, pivotSmoothTime);
-        Vector3 pivot = new Vector3(rawPivot.x, smoothPivotY, rawPivot.z);
         Vector3 dir = rot * Vector3.back;
+        Vector3 pivot = new Vector3(rawPivot.x, smoothPivotY, rawPivot.z) + rot * Vector3.right * shoulderOffset;
 
         // Pull the camera in if terrain/geometry is between it and the player, so it never
         // ends up inside a wall. Ignore the player's own colliders.

@@ -28,7 +28,7 @@ public class ScatterField : MonoBehaviour
     public float collisionDistance = 28f;
 
     readonly List<Matrix4x4> batch = new List<Matrix4x4>();
-    readonly List<CapsuleCollider> pool = new List<CapsuleCollider>();
+    readonly List<MeshCollider> pool = new List<MeshCollider>();   // real per-tree mesh colliders (like the HomeTree), windowed around the player
     Transform colRoot;
     Transform player;
 
@@ -72,7 +72,7 @@ public class ScatterField : MonoBehaviour
         if (player == null) { var pm = FindFirstObjectByType<PlayerMovement>(); player = pm != null ? pm.transform : null; }
         if (player == null) return;
 
-        if (colRoot == null) { var go = new GameObject("~Colliders"); go.hideFlags = HideFlags.DontSave; go.transform.SetParent(transform, false); colRoot = go.transform; }
+        if (colRoot == null) { var go = new GameObject("~Colliders") { hideFlags = HideFlags.DontSave }; colRoot = go.transform; }   // top-level = world-identity, so instance world matrices apply cleanly
         Vector3 pp = player.position; float cd = collisionDistance * collisionDistance;
         int used = 0;
         foreach (var g in groups)
@@ -83,20 +83,23 @@ public class ScatterField : MonoBehaviour
                 if ((g.positions[i] - pp).sqrMagnitude > cd) continue;
                 var col = used < pool.Count ? pool[used] : NewCol();
                 used++;
+                var m = g.instances[i];                                              // full per-instance transform: pos + spin + scale
                 float sc = (g.scales != null && i < g.scales.Length) ? g.scales[i] : 1f;
-                col.transform.position = g.positions[i];
-                col.radius = g.colRadius * sc; col.height = g.colHeight * sc; col.center = new Vector3(0, g.colCenterY * sc, 0);
+                col.transform.SetPositionAndRotation(new Vector3(m.m03, m.m13, m.m23), m.rotation);
+                col.transform.localScale = Vector3.one * sc;
+                if (col.sharedMesh != g.mesh) col.sharedMesh = g.mesh;               // the REAL tree mesh — same solid collision the HomeTree uses, not a thin pole
                 col.enabled = true;
             }
         }
         for (int i = used; i < pool.Count; i++) pool[i].enabled = false;
     }
 
-    CapsuleCollider NewCol()
+    MeshCollider NewCol()
     {
         var go = new GameObject("c") { hideFlags = HideFlags.DontSave };
         go.transform.SetParent(colRoot, false);
-        var c = go.AddComponent<CapsuleCollider>();
+        var c = go.AddComponent<MeshCollider>();
+        c.convex = false;   // solid non-convex bark, exactly like the HomeTree
         pool.Add(c);
         return c;
     }

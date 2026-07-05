@@ -12,6 +12,10 @@ GameObject:
   - component: {fileID: 7911821652726390287}
   - component: {fileID: 5343688728073267909}
   - component: {fileID: 7400569922418094687}
+  - component: {fileID: 977364673614121787}
+  - component: {fileID: 5481329584187741585}
+  - component: {fileID: 2709448024124007364}
+  - component: {fileID: 3004096277893245056}
   m_Layer: 0
   m_Name: Tuftling
   m_TagString: Untagged
@@ -113,3 +117,67 @@ MonoBehaviour:
   bobSpeed: 5
   hopChance: 0.004
   hopHeight: 0.25
+--- !u!114 &977364673614121787
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5848035056181791504}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32b12d9c44548486aaf68b0c45abffc8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HealthSystem
+  maxHearts: 2
+--- !u!114 &5481329584187741585
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5848035056181791504}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bab98f0e7884447c6bd3b482b9709f2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MobHurt
+  flashTime: 0.25
+  hitTint: {r: 1, g: 0.25, b: 0.2, a: 1}
+  knockback: 10
+  knockTime: 0.25
+--- !u!114 &2709448024124007364
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5848035056181791504}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43f2b2e68e4224bcf8c7c02fc71f89ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MobDeath
+  settle: 1.2
+  sinkTime: 0.8
+--- !u!135 &3004096277893245056
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5848035056181791504}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.00159674
+  m_Center: {x: 0.0000024999608, y: 0.0014, z: -0.000020725012}

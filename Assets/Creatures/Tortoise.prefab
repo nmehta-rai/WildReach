@@ -73,6 +73,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 2a9557e9e9b9e44f9a67eafbf805a36b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 9016834307763916994}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 2a9557e9e9b9e44f9a67eafbf805a36b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4435414849638813777}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 2a9557e9e9b9e44f9a67eafbf805a36b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 234496910122271180}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 2a9557e9e9b9e44f9a67eafbf805a36b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6273510605263276608}
   m_SourcePrefab: {fileID: 100100000, guid: 2a9557e9e9b9e44f9a67eafbf805a36b, type: 3}
 --- !u!1 &8427603159412118995 stripped
 GameObject:
@@ -146,3 +155,46 @@ MonoBehaviour:
   speed: 0.35
   turnDegPerSec: 90
   pauseRange: {x: 1.5, y: 4}
+--- !u!114 &4435414849638813777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8427603159412118995}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32b12d9c44548486aaf68b0c45abffc8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HealthSystem
+  maxHearts: 2
+--- !u!114 &234496910122271180
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8427603159412118995}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bab98f0e7884447c6bd3b482b9709f2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MobHurt
+  flashTime: 0.25
+  hitTint: {r: 1, g: 0.25, b: 0.2, a: 1}
+  knockback: 10
+  knockTime: 0.25
+--- !u!114 &6273510605263276608
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8427603159412118995}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43f2b2e68e4224bcf8c7c02fc71f89ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MobDeath
+  settle: 1.2
+  sinkTime: 0.8

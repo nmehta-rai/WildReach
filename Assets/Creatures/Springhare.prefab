@@ -12,6 +12,10 @@ GameObject:
   - component: {fileID: 1153355939534393378}
   - component: {fileID: 4027762142669710568}
   - component: {fileID: 6765480091949183789}
+  - component: {fileID: 3977584131059795130}
+  - component: {fileID: 4184414839902858230}
+  - component: {fileID: 6046176307632104066}
+  - component: {fileID: 1288014587514552217}
   m_Layer: 0
   m_Name: Springhare
   m_TagString: Untagged
@@ -113,3 +117,67 @@ MonoBehaviour:
   bobSpeed: 5
   hopChance: 0.004
   hopHeight: 0.25
+--- !u!114 &3977584131059795130
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3235132799966479677}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32b12d9c44548486aaf68b0c45abffc8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HealthSystem
+  maxHearts: 2
+--- !u!114 &4184414839902858230
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3235132799966479677}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bab98f0e7884447c6bd3b482b9709f2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MobHurt
+  flashTime: 0.25
+  hitTint: {r: 1, g: 0.25, b: 0.2, a: 1}
+  knockback: 10
+  knockTime: 0.25
+--- !u!114 &6046176307632104066
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3235132799966479677}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43f2b2e68e4224bcf8c7c02fc71f89ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MobDeath
+  settle: 1.2
+  sinkTime: 0.8
+--- !u!135 &1288014587514552217
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3235132799966479677}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.0014344
+  m_Center: {x: 0.000005029957, y: 0.0014, z: -0.000005309994}

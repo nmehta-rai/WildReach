@@ -70,6 +70,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0d6cdfebc4bed4c5d896e7f735c43d41, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7857380903519461632}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0d6cdfebc4bed4c5d896e7f735c43d41, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2099686374001140341}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0d6cdfebc4bed4c5d896e7f735c43d41, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2876476981368642348}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 0d6cdfebc4bed4c5d896e7f735c43d41, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 441292234230698254}
   m_SourcePrefab: {fileID: 100100000, guid: 0d6cdfebc4bed4c5d896e7f735c43d41, type: 3}
 --- !u!1 &7724024920966199645 stripped
 GameObject:
@@ -118,3 +127,46 @@ MonoBehaviour:
   speed: 1.1
   turnDegPerSec: 90
   pauseRange: {x: 1.5, y: 4}
+--- !u!114 &2099686374001140341
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7724024920966199645}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32b12d9c44548486aaf68b0c45abffc8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HealthSystem
+  maxHearts: 2
+--- !u!114 &2876476981368642348
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7724024920966199645}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bab98f0e7884447c6bd3b482b9709f2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MobHurt
+  flashTime: 0.25
+  hitTint: {r: 1, g: 0.25, b: 0.2, a: 1}
+  knockback: 10
+  knockTime: 0.25
+--- !u!114 &441292234230698254
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7724024920966199645}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43f2b2e68e4224bcf8c7c02fc71f89ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MobDeath
+  settle: 1.2
+  sinkTime: 0.8
