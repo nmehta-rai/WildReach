@@ -6,7 +6,18 @@ You start on the island you're from. A cold sacred peak at one end, a warm depar
 
 Then you push off, and the ocean is the rest of the game.
 
-<!-- SCREENSHOTS -->
+![WildReach — the forest, and something large in it](docs/screenshots/wildreach-1-forest-beast.jpg)
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/wildreach-2-forest-vista.jpg" alt="The forest, with the mountain beyond"></td>
+<td width="50%"><img src="docs/screenshots/wildreach-3-sacred-canopy.jpg" alt="Up in the canopy of the home tree"></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/wildreach-4-leopard-dusk.jpg" alt="A snow leopard at dusk, torch lit"></td>
+<td width="50%"><img src="docs/screenshots/wildreach-5-climbing.jpg" alt="Climbing a cliff face"></td>
+</tr>
+</table>
 
 ---
 
