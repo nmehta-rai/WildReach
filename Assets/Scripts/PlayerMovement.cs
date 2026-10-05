@@ -11,7 +11,12 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] Transform cameraTransform;
 
     Rigidbody rb;
+    CapsuleCollider capsule;
     StaminaSystem stamina;
+    readonly RaycastHit[] groundHits = new RaycastHit[16];
+    Collider contactSupport;
+    float supportTime = float.NegativeInfinity;
+    float jumpUngroundedUntil;
 
     bool jumpQueued;
     bool isGrounded = true;
@@ -37,6 +42,7 @@ public class PlayerMovement : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        capsule = GetComponent<CapsuleCollider>();
         stamina = GetComponent<StaminaSystem>();
         rb.freezeRotation = true;
         rb.interpolation = RigidbodyInterpolation.Interpolate;                    // smooth visual motion (no landing jitter)
@@ -45,8 +51,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        isGrounded = Physics.Raycast(transform.position, Vector3.down, out var groundHit, 1.15f);
-        groundTf = isGrounded ? groundHit.transform : null;
+        RefreshGroundSupport();
 
         if (!Enabled) return;
 
@@ -56,6 +61,7 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
+        RefreshGroundSupport();
         if (!Enabled) { PlanarSpeed = 0f; return; }
 
         float h = Input.GetAxis("Horizontal");
@@ -80,6 +86,10 @@ public class PlayerMovement : MonoBehaviour
         {
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
             jumpQueued = false;
+            jumpUngroundedUntil = Time.time + 0.12f;
+            isGrounded = false;
+            groundTf = null;
+            contactSupport = null;
             Jumped?.Invoke();
         }
 
@@ -119,4 +129,56 @@ public class PlayerMovement : MonoBehaviour
 
     public void SetVelocity(Vector3 v) => rb.linearVelocity = v;
     public void SetGravity(bool on) => rb.useGravity = on;
+
+    void RefreshGroundSupport()
+    {
+        isGrounded = false;
+        groundTf = null;
+        if (Time.time < jumpUngroundedUntil || capsule == null) return;
+
+        // A sloped root can support the side of the capsule while a centre ray misses.
+        if (contactSupport != null && Time.fixedTime - supportTime <= Time.fixedDeltaTime * 1.5f)
+        {
+            isGrounded = true;
+            groundTf = contactSupport.transform;
+            return;
+        }
+
+        Vector3 scale = transform.lossyScale;
+        float radius = capsule.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
+        float halfHeight = Mathf.Max(radius, capsule.height * Mathf.Abs(scale.y) * 0.5f);
+        Vector3 footCentre = transform.TransformPoint(capsule.center) - Vector3.up * (halfHeight - radius);
+        int count = Physics.SphereCastNonAlloc(footCentre + Vector3.up * 0.05f,
+            Mathf.Max(0.01f, radius - 0.02f), Vector3.down, groundHits, 0.15f,
+            Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        float nearest = float.PositiveInfinity;
+        for (int i = 0; i < count; i++)
+        {
+            var hit = groundHits[i];
+            // An initial overlap reports the inverse cast direction, not a surface normal.
+            if (hit.collider.attachedRigidbody == rb || hit.distance <= 0f || hit.normal.y < 0.35f || hit.distance >= nearest) continue;
+            nearest = hit.distance;
+            isGrounded = true;
+            groundTf = hit.transform;
+        }
+    }
+
+    void OnCollisionStay(Collision collision)
+    {
+        if (Time.time < jumpUngroundedUntil) return;
+        float centreY = transform.TransformPoint(capsule.center).y;
+        for (int i = 0; i < collision.contactCount; i++)
+        {
+            var contact = collision.GetContact(i);
+            if (contact.normal.y < 0.35f || contact.point.y >= centreY) continue;
+            contactSupport = collision.collider;
+            supportTime = Time.fixedTime;
+            return;
+        }
+    }
+
+    void OnCollisionExit(Collision collision)
+    {
+        if (collision.collider == contactSupport) contactSupport = null;
+    }
 }

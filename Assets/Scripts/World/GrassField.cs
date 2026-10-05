@@ -20,6 +20,8 @@ public class GrassField : MonoBehaviour
     public float drawDistance = 95f;
     public float baseSpacing = 0.5f;
     public float slopeLimit = 35f;
+    public Vector2 scaleRange = new Vector2(0.8f, 1.4f);
+    public Vector3 scaleMultiplier = Vector3.one;
 
     const float ChunkSize = 12f;
     const int   MaxCachedChunks = 2500;
@@ -98,7 +100,7 @@ public class GrassField : MonoBehaviour
             float y = terrain.SampleHeight(new Vector3(x, 0, z)) + tpos.y;
             var trs = Matrix4x4.TRS(new Vector3(x, y, z),
                                     Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f),
-                                    Vector3.one * (0.8f + (float)rng.NextDouble() * 0.6f));
+                                    scaleMultiplier * Mathf.Lerp(scaleRange.x, scaleRange.y, (float)rng.NextDouble()));
             lists[rng.Next(meshes.Length)].Add(trs);
         }
         return lists;
